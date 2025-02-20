@@ -18,7 +18,7 @@ public class LexUtils {
 	}
 	
 	public static boolean isDelimeter(Token tk) {
-		return tk.type.anyOf(TokenType.LINE_FEED_DELIMETER, TokenType.SEMICOLON_DELIMETER);
+		return tk.type.anyOf(TokenType.LINE_FEED_DELIMITER, TokenType.SEMICOLON_DELIMITER);
 	}
 	
 	public static Predicate<Token> isTypeAnyOf(TokenType... types) {

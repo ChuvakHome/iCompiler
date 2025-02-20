@@ -77,7 +77,7 @@ public class DFALexer implements Lexer {
 						return new Token(
 										startLineNumber,
 										startLineOffset,
-										TokenType.LINE_FEED_DELIMETER,
+										TokenType.LINE_FEED_DELIMITER,
 										"\n"
 									);
 					} else if (Character.isWhitespace(ch)) {

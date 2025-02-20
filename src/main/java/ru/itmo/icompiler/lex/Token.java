@@ -107,8 +107,8 @@ public class Token {
 		
 		// Delimiters
 		
-		SEMICOLON_DELIMETER,
-		LINE_FEED_DELIMETER,
+		SEMICOLON_DELIMITER,
+		LINE_FEED_DELIMITER,
 		
 		END_OF_TEXT,
 		
@@ -206,8 +206,8 @@ public class Token {
 			
 			// Terminals ??
 			
-			Map.entry(";", TokenType.SEMICOLON_DELIMETER),
-			Map.entry("\n", TokenType.LINE_FEED_DELIMETER)
+			Map.entry(";", TokenType.SEMICOLON_DELIMITER),
+			Map.entry("\n", TokenType.LINE_FEED_DELIMITER)
 	));
 	
 	public String toString() {
