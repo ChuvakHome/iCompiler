@@ -1,8 +1,11 @@
 package ru.itmo.icompiler;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.function.Predicate;
 
 import ru.itmo.icompiler.lex.DFALexer;
+import ru.itmo.icompiler.lex.LexUtils;
 import ru.itmo.icompiler.lex.Lexer;
 import ru.itmo.icompiler.syntax.ASTNode;
 import ru.itmo.icompiler.syntax.Parser;
@@ -21,6 +24,13 @@ public class ICompiler {
 	}
 	
 	public static void main(String[] args) throws FileNotFoundException {
+		Lexer lexer = new DFALexer(new File("src/test/resources/lexer/good/prog1.ilang"));
+		
+		while (!lexer.isEndReached())
+			System.out.println(lexer.nextToken(Predicate.not(LexUtils::isWhitespace)));
+		
+		System.exit(0);
+		
 		{
 			String s = ""
 					 + "var x: integer is a.my_prop[1].new_prop.inner_prop.matrix[1][1] + 5 * 3; x := x + a * b - c; "
@@ -58,9 +68,9 @@ public class ICompiler {
 				+ "end\n"
 				+ "";
 
-		Lexer lexer = new DFALexer(s);
-		
-		while (!lexer.isEndReached())
-			System.out.println(lexer.nextToken());
+//		Lexer lexer = new DFALexer(s);
+//		
+//		while (!lexer.isEndReached())
+//			System.out.println(lexer.nextToken());
 	}
 }

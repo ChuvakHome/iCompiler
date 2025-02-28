@@ -1,0 +1,9 @@
+routine foo() is 
+  return 0
+end
+
+routine main() is
+  foo()
+  var foo is 42
+  foo()
+end

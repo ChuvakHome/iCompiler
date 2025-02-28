@@ -158,7 +158,7 @@ public class DFALexer implements Lexer {
 						} else {
 							tokenTextSB.append(ch);
 							++lineOffset;
-							
+
 							state = DFALexerState.REAL_NUMERIC_LITERAL_STATE;
 							tokType = TokenType.REAL_NUMERIC_LITERAL;
 						}
@@ -226,15 +226,15 @@ public class DFALexer implements Lexer {
 			case NUMERIC_LITERAL_STATE:
 				return new Token(
 								startLineNumber, 
-								startLineOffset, 
-								TokenType.INTEGER_NUMERIC_LITERAL, 
+								startLineOffset,
+								TokenType.INTEGER_NUMERIC_LITERAL,
 								tokenTextSB.toString()
 							);
 			case REAL_NUMERIC_LITERAL_STATE:
 				return new Token(
 								startLineNumber, 
-								startLineOffset, 
-								TokenType.REAL_NUMERIC_LITERAL, 
+								startLineOffset,
+								TokenType.REAL_NUMERIC_LITERAL,
 								tokenTextSB.toString()
 							);
 			default:

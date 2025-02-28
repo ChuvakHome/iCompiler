@@ -1,0 +1,44 @@
+type SATSolverResult is boolean
+
+var Solver : record
+  var UNSAT : SATSolverResult is false
+  var SAT   : SATSolverResult is true
+end
+
+routine solve(
+  variables_count: integer,
+  clauses array[] array[] integer
+) : SATSolverResult is
+  if variables_count = 0 and clauses.length > 0 then
+    return Solver.UNSAT
+
+  if clauses.length = 0 then
+    return Solver.SAT
+  end
+
+  // реализация алгоритма DPLL предлагается читателю в качестве упражнения
+
+  return Solver.UNSAT
+end
+
+routine main() is
+  var variables_count is 4
+  var clauses: array [4] array [3] integer
+  clauses[0][0] = -1
+  clauses[0][1] = -3
+  clauses[0][2] = 0
+
+  clauses[1][0] = 1
+  clauses[1][1] = 3
+  clauses[1][2] = 0
+
+  clauses[2][0] = -2
+  clauses[2][1] = -4
+  clauses[2][2] = 0
+
+  clauses[3][0] = 2
+  clauses[3][1] = 4
+  clauses[3][2] = 0
+    
+  print solve(variables_count, clauses)
+end

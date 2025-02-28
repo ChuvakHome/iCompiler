@@ -1,0 +1,37 @@
+type Point is record
+  var x is 0
+  var y is 0
+end
+ 
+routine max(a : integer, b : integer) is
+  if a > b
+  then
+    return a
+  else
+    return b
+  end
+end
+
+routine min(a : integer, b : integer) is
+  if a < b
+  then
+    return a
+  else
+    return b
+  end
+end
+
+routine area(a : Point, b : Point, c : Point) is
+  return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+end
+ 
+routine check_bound(a : integer, b : integer, c : integer, d : integer) is
+  return max(min(a, b), min(c, d)) <= min(max(a, b), max(c, d))
+end
+ 
+routine intersect(a : Point, b : Point, c : Point, d : Point) is
+  return check_bound(a.x, b.x, c.x, d.x)
+    and check_bound(a.y, b.y, c.y, d.y)
+    and area(a, b, c) * area(a, b, d) <= 0
+    and area(c, d, a) * area(c, d, b) <= 0
+end
