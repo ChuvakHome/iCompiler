@@ -1,4 +1,4 @@
-package ru.itmo.icompiler.syntax;
+package ru.itmo.icompiler.syntax.ast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,9 +40,10 @@ public class RoutineDeclarationASTNode extends ASTNode {
 	}
 	
 	public String toString() {
-		return String.format("%s[routine = %s, args = %s]",
+		return String.format("%s[routine = %s, resultType = %s, args = %s]",
 					getNodeType(),
 					routineName,
+					resultType,
 					argumentsDeclarations
 				);
 	}

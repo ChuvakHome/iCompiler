@@ -1,8 +1,8 @@
-package ru.itmo.icompiler.syntax.expression;
+package ru.itmo.icompiler.syntax.ast.expression;
 
 import java.util.Locale;
 
-import ru.itmo.icompiler.syntax.ASTNode;
+import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class PropertyAccessExpressionNode extends BinaryOperatorExpressionNode {
 	private ExpressionASTNode propertyHolder;
@@ -34,11 +34,12 @@ public class PropertyAccessExpressionNode extends BinaryOperatorExpressionNode {
 //	}
 	
 	public String toString(int tabs) {
-		return String.format(Locale.ENGLISH, "%s%s::%s[\n%sholder = %s,\n%sprop = %s]",
-					" ".repeat(4 * tabs),
+		String sep = "\n" + " ".repeat((tabs + 1) * 4);
+		
+		return String.format(Locale.ENGLISH, "%s::%s[%sholder = %s,%sprop = %s]",
 					getNodeType(), getExpressionNodeType(),
-					" ".repeat(4 * tabs), propertyHolder.toString(tabs + 1), 
-					" ".repeat(4 * tabs), propertyName
+					sep, propertyHolder.toString(tabs + 1), 
+					sep, propertyName
 				);
 	}
 }

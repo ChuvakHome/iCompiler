@@ -1,8 +1,8 @@
-package ru.itmo.icompiler.syntax.expression;
+package ru.itmo.icompiler.syntax.ast.expression;
 
 import java.util.Locale;
 
-import ru.itmo.icompiler.syntax.ASTNode;
+import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class RecordPropertyNameExpressionNode extends ExpressionASTNode {
 	private String propertyName;

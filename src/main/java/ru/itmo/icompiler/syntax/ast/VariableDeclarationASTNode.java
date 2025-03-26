@@ -1,4 +1,4 @@
-package ru.itmo.icompiler.syntax;
+package ru.itmo.icompiler.syntax.ast;
 
 import ru.itmo.icompiler.semantic.VarType;
 

@@ -1,10 +1,10 @@
-package ru.itmo.icompiler.syntax.expression;
+package ru.itmo.icompiler.syntax.ast.expression;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-import ru.itmo.icompiler.syntax.ASTNode;
+import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class BinaryOperatorExpressionNode extends ExpressionASTNode {
 	private BinaryOperatorType binopType;
@@ -78,12 +78,13 @@ public class BinaryOperatorExpressionNode extends ExpressionASTNode {
 	}
 	
 	public String toString(int tabs) {
-		return String.format(Locale.ENGLISH, "%s%s::%s[%s,\n%sleft = %s,\n%sright = %s]",
-					" ".repeat(4 * tabs),
+		String sep = "\n" + " ".repeat((tabs + 1) * 4);
+		
+		return String.format(Locale.ENGLISH, "%s::%s[%stype = %s,%sleft = %s,%sright = %s]",
 					getNodeType(), getExpressionNodeType(),
-					binopType,
-					" ".repeat(4 * tabs), leftChild.toString(tabs + 1), 
-					" ".repeat(4 * tabs), rightChild.toString(tabs + 1)
+					sep, binopType,
+					sep, leftChild.toString(tabs + 1), 
+					sep, rightChild.toString(tabs + 1)
 				);
 	}
 	

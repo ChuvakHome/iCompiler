@@ -1,13 +1,13 @@
-package ru.itmo.icompiler.syntax;
+package ru.itmo.icompiler.syntax.ast;
 
-import ru.itmo.icompiler.syntax.expression.ExpressionASTNode;
+import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
-public class IfElseStatementASTNode extends ASTNode {
+public class IfThenElseStatementASTNode extends ASTNode {
 	private ExpressionASTNode conditionExprNode;
 	private ASTNode trueBranchNode;
 	private ASTNode elseBranchNode;
 	
-	public IfElseStatementASTNode(ASTNode parentNode, ExpressionASTNode condition, ASTNode trueBranch, ASTNode elseBranch) {
+	public IfThenElseStatementASTNode(ASTNode parentNode, ExpressionASTNode condition, ASTNode trueBranch, ASTNode elseBranch) {
 		super(parentNode, ASTNodeType.IF_ELSE_STMT_NODE);
 
 		conditionExprNode = condition;

@@ -36,6 +36,8 @@ public class Token {
 		REVERSE_KEYWORD,
 		IN_KEYWORD,
 		
+		BREAK_KEYWORD,
+		
 		LOOP_KEYWORD,
 		
 		IS_KEYWORD,
@@ -66,6 +68,8 @@ public class Token {
 		FALSE_BOOLEAN_LITERAL,
 		INTEGER_NUMERIC_LITERAL,
 		REAL_NUMERIC_LITERAL,
+		
+		STRING_LITERAL,
 		
 		// Ident
 		
@@ -143,6 +147,8 @@ public class Token {
 			Map.entry("reverse", TokenType.REVERSE_KEYWORD),
 			Map.entry("in", TokenType.IN_KEYWORD),
 			
+			Map.entry("break", TokenType.BREAK_KEYWORD),
+			
 			Map.entry("loop", TokenType.LOOP_KEYWORD),
 			
 			Map.entry("is", TokenType.IS_KEYWORD),
@@ -209,6 +215,93 @@ public class Token {
 			Map.entry(";", TokenType.SEMICOLON_DELIMITER),
 			Map.entry("\n", TokenType.LINE_FEED_DELIMITER)
 	));
+	
+	public static final Map<TokenType, String> TOKENS_TEXT = Collections.unmodifiableMap(Map.ofEntries(
+			Map.entry(TokenType.VAR_KEYWORD, quoted("var")),
+			Map.entry(TokenType.TYPE_KEYWORD, quoted("type")),
+			
+			Map.entry(TokenType.ROUTINE_KEYWORD, quoted("routine")),
+			Map.entry(TokenType.RETURN_KEYWORD, quoted("return")),
+			
+			Map.entry(TokenType.IF_KEYWORD, quoted("if")),
+			Map.entry(TokenType.THEN_KEYWORD, quoted("then")),
+			Map.entry(TokenType.ELSE_KEYWORD, quoted("else")),
+			
+			Map.entry(TokenType.WHILE_KEYWORD, quoted("while")),
+			
+			Map.entry(TokenType.FOR_KEYWORD, quoted("for")),
+			Map.entry(TokenType.REVERSE_KEYWORD, quoted("reverse")),
+			Map.entry(TokenType.IN_KEYWORD, quoted("in")),
+			
+			Map.entry(TokenType.BREAK_KEYWORD, quoted("break")),
+			
+			Map.entry(TokenType.LOOP_KEYWORD, quoted("loop")),
+			
+			Map.entry(TokenType.IS_KEYWORD, quoted("is")),
+			Map.entry(TokenType.END_KEYWORD, quoted("end")),
+			
+			Map.entry(TokenType.BOOLEAN_KEYWORD, quoted("boolean")),
+			Map.entry(TokenType.INTEGER_KEYWORD, quoted("integer")),
+			Map.entry(TokenType.REAL_KEYWORD, quoted("real")),
+			
+			Map.entry(TokenType.ARRAY_KEYWORD, quoted("array")),
+			Map.entry(TokenType.RECORD_KEYWORD, quoted("record")),
+			
+			Map.entry(TokenType.LEFT_BRACKET, quoted("[")),
+			Map.entry(TokenType.RIGHT_BRACKET, quoted("]")),
+			
+			Map.entry(TokenType.LEFT_PARENTHESIS, quoted("(")),
+			Map.entry(TokenType.RIGHT_PARENTHESIS, quoted(")")),
+			
+			Map.entry(TokenType.IDENTIFIER, "identifier"),
+			
+			Map.entry(TokenType.TRUE_BOOLEAN_LITERAL, quoted("true")),
+			Map.entry(TokenType.FALSE_BOOLEAN_LITERAL, quoted("false")),
+			
+			Map.entry(TokenType.PLUS_OPERATOR, quoted("+")),
+			Map.entry(TokenType.MINUS_OPERATOR, quoted("-")),
+			Map.entry(TokenType.MULTIPLY_OPERATOR, quoted("*")),
+			Map.entry(TokenType.DIVIDE_OPERATOR, quoted("/")),
+			Map.entry(TokenType.MODULO_OPERATOR, quoted("%")),
+			
+			Map.entry(TokenType.NOT_OPERATOR, quoted("not")),
+			
+			Map.entry(TokenType.AND_OPERATOR, quoted("and")),
+			Map.entry(TokenType.OR_OPERATOR, quoted("or")),
+			Map.entry(TokenType.XOR_OPERATOR, quoted("xor")),
+			
+			Map.entry(TokenType.RANGE_OPERATOR, quoted("..")),
+			
+			Map.entry(TokenType.ASSIGN_OPERATOR, quoted(":=")),
+			
+			Map.entry(TokenType.PRINT_OPERATOR, quoted("print")),
+			
+			Map.entry(TokenType.LT_OPERATOR, quoted("<")),
+			Map.entry(TokenType.LE_OPERATOR, quoted("<=")),
+			Map.entry(TokenType.EQ_OPERATOR, quoted("=")),
+			Map.entry(TokenType.NE_OPERATOR, quoted("/=")),
+			Map.entry(TokenType.GT_OPERATOR, quoted(">")),
+			Map.entry(TokenType.GE_OPERATOR, quoted(">=")),
+			
+			Map.entry(TokenType.COLON_OPERATOR, quoted(":")),
+			Map.entry(TokenType.COMMA_OPERATOR, quoted(",")),
+			Map.entry(TokenType.DOT_OPERATOR, quoted(".")),
+			Map.entry(TokenType.ROUTINE_EXPRESSION_OPERATOR, quoted("=>"))
+	));
+	
+	public static String quoted(String s) {
+		return '"' + s + '"';
+	}
+	
+	public boolean equals(Object o) {
+		if (o instanceof Token) {
+			Token t = (Token) o;
+			
+			return lineNumber == t.lineNumber && lineOffset == t.lineOffset && type == t.type && text.equals(t.text);
+		}
+		
+		return false;
+	}
 	
 	public String toString() {
 		return String.format("[type = %s, %d:%d, \"%s\"]", 

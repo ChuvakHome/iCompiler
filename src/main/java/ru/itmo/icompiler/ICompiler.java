@@ -1,19 +1,17 @@
 package ru.itmo.icompiler;
 
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.function.Predicate;
 
-import ru.itmo.icompiler.lex.DFALexer;
-import ru.itmo.icompiler.lex.LexUtils;
-import ru.itmo.icompiler.lex.Lexer;
-import ru.itmo.icompiler.syntax.ASTNode;
 import ru.itmo.icompiler.syntax.Parser;
 import ru.itmo.icompiler.syntax.SimpleParser;
+import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class ICompiler {
 	private static void processNode0(ASTNode node, int tabs) {
-		System.out.println(node.toString(tabs));
+		System.out.printf("%s%s\n",
+				" ".repeat(tabs * 4),
+				node.toString(tabs)
+			);
 		
 		for (ASTNode child: node.getChildren())
 			processNode0(child, tabs + 1);
@@ -24,26 +22,32 @@ public class ICompiler {
 	}
 	
 	public static void main(String[] args) throws FileNotFoundException {
-		Lexer lexer = new DFALexer(new File("src/test/resources/lexer/good/prog1.ilang"));
-		
-		while (!lexer.isEndReached())
-			System.out.println(lexer.nextToken(Predicate.not(LexUtils::isWhitespace)));
-		
-		System.exit(0);
+//		Lexer lexer = new DFALexer("5 + 1");
+//		
+//		while (!lexer.isEndReached())
+//			System.out.println(lexer.nextToken());
+//		
+//		System.exit(0);
 		
 		{
 			String s = ""
-					 + "var x: integer is a.my_prop[1].new_prop.inner_prop.matrix[1][1] + 5 * 3; x := x + a * b - c; "
-					 + "var y: integer is 1 + 2 > 0 and 6 * 4 = 24 or x < y + 5 * 10\n"
+//					 + "var x: integer is a.my_prop[1].new_prop.inner_prop.matrix[1][1] + 5 * 3; "
+//					 + "var y is 1 + 2 > x and false\n"
+//					 + "var y: integer is 1 + 2 > 0 and 6 * 4 = 24 or x < y + 5 * 10\n"
 //					 + "var z is q and not -42. or flag\n"
-//					 + "var u is (a + b < c or p * q = k) and ((x + y) * t + 1 /= u * w - -g(1, 2, 10 - 5 * 3) or d) xor flag"
-//					 + "routine f(x: integer, y: real, flag: boolean)"
+//					 + "var t is a + b * c - x"
+					 + "var u: boolean is (a + b < c or p * q = k) and ((x + y) * t + 1 /= u * w - * -g(1, 2, 10 - 5 * 3) or d) xor flag\n"
+					 + "routine f(x: integer, y: real, t, flag: boolean)\n"
+					 + "var x is true"
 					 ;
 			
 			Parser parser = new SimpleParser(s);
 			
 			ASTNode n = parser.parse();
 			processNode(n);
+			
+//			parser.getSyntaxErrors().forEach(System.err::println);
+			parser.printErrors();
 			
 			if (true)
 				return;

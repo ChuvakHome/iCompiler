@@ -1,4 +1,4 @@
-package ru.itmo.icompiler.syntax;
+package ru.itmo.icompiler.syntax.ast;
 
 public class ProgramASTNode extends ASTNode {
 

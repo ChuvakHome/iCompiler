@@ -1,10 +1,10 @@
-package ru.itmo.icompiler.syntax.expression;
+package ru.itmo.icompiler.syntax.ast.expression;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import ru.itmo.icompiler.syntax.ASTNode;
+import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class RoutineCallExpressionNode extends ExpressionASTNode {
 	private String routineName;
@@ -36,7 +36,7 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 	public String toString(int tabs) {
 		List<String> argsStringified = arguments
 											.stream()
-											.map(arg -> "\n" + arg.toString(tabs + 1))
+											.map(arg -> "\n" + " ".repeat((tabs + 1) * 4) + arg.toString(tabs + 1))
 											.toList();
 		
 		return String.format("%s::%s{routine = %s, args = [%s]}",

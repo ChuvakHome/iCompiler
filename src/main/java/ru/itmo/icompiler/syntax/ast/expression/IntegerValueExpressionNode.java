@@ -1,6 +1,6 @@
-package ru.itmo.icompiler.syntax.expression;
+package ru.itmo.icompiler.syntax.ast.expression;
 
-import ru.itmo.icompiler.syntax.ASTNode;
+import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class IntegerValueExpressionNode extends ExpressionASTNode {
 	private int value;

@@ -1,6 +1,6 @@
-package ru.itmo.icompiler.syntax;
+package ru.itmo.icompiler.syntax.ast;
 
-import ru.itmo.icompiler.syntax.expression.ExpressionASTNode;
+import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
 public class VariableAssignmentASTNode extends ASTNode {
 	private String variable;
@@ -21,11 +21,11 @@ public class VariableAssignmentASTNode extends ASTNode {
 		return variable;
 	}
 	
-	public String toString() {
+	public String toString(int tabs) {
 		return String.format("%s[var = %s, expr = %s]", 
 					getNodeType(),
 					variable,
-					valueNode
+					valueNode.toString(tabs + 1)
 				);
 	}
 }

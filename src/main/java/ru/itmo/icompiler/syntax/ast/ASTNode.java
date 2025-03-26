@@ -1,4 +1,4 @@
-package ru.itmo.icompiler.syntax;
+package ru.itmo.icompiler.syntax.ast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +41,7 @@ public class ASTNode {
 	}
 	
 	public String toString(int tabs) {
-		return String.format("%s%s", " ".repeat(tabs * 4), toString());
+		return String.format("%s", toString());
 	}
 	
 	public String toString() {

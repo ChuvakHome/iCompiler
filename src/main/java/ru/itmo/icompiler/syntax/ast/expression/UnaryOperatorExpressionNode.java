@@ -1,8 +1,8 @@
-package ru.itmo.icompiler.syntax.expression;
+package ru.itmo.icompiler.syntax.ast.expression;
 
 import java.util.Locale;
 
-import ru.itmo.icompiler.syntax.ASTNode;
+import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 	private UnaryOperatorType unopType;
@@ -50,10 +50,12 @@ public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 	}
 	
 	public String toString(int tabs) {
-		return String.format(Locale.ENGLISH, "%s::%s[%s,\n%svalue = %s]",
+		String sep = "\n" + " ".repeat((tabs + 1) * 4);
+		
+		return String.format(Locale.ENGLISH, "%s::%s[%stype = %s,%svalue = %s]",
 					getNodeType(), getExpressionNodeType(),
-					unopType,
-					" ".repeat(4 * tabs), value.toString(tabs + 1)
+					sep, unopType,
+					sep, value.toString(tabs + 1)
 				);
 	}
 
