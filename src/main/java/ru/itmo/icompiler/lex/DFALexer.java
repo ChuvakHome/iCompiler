@@ -58,9 +58,7 @@ public class DFALexer implements Lexer {
 		
 		state = DFALexerState.INIT_STATE;
 		
-		while (!reader.isEndReached() && state != DFALexerState.TERMINAL_STATE) {
-//			System.out.println("\nSTEP: " + state + ", " + reader.lookupChar());
-			
+		while (!reader.isEndReached() && state != DFALexerState.TERMINAL_STATE) {			
 			switch (state) {
 				case INIT_STATE: {
 					char ch = reader.nextChar();
@@ -206,9 +204,7 @@ public class DFALexer implements Lexer {
 				} case WHITESPACE_STATE: {
 					char ch = reader.lookupChar();
 					
-//					System.out.println("DEBUG: " + ch);
-					
-					if (Character.isWhitespace(ch)) {
+					if (isWhitespace(ch)) {
 						tokenTextSB.append(ch);
 						reader.toNextChar();
 						++lineOffset;
@@ -217,8 +213,6 @@ public class DFALexer implements Lexer {
 						state = DFALexerState.TERMINAL_STATE;
 						tokType = TokenType.WHITESPACE;
 					}
-					
-//					System.out.println("DEBUG/: " + state);
 					
 					break;
 				} case OPERATOR_STATE: {
@@ -245,8 +239,6 @@ public class DFALexer implements Lexer {
 				}
 			}
 		}
-		
-//		System.out.println("END_OF: " + state + ", " + tokType + ", " + tokenTextSB);
 		
 		if (state == DFALexerState.TERMINAL_STATE) {
 			return new Token(
@@ -324,5 +316,9 @@ public class DFALexer implements Lexer {
 	
 	public boolean isEndReached() {
 		return (currentToken == null || currentToken.type == TokenType.END_OF_TEXT) && reader.isEndReached();
+	}
+	
+	private static boolean isWhitespace(char ch) {
+		return ch != '\n' && Character.isWhitespace(ch);
 	}
 }

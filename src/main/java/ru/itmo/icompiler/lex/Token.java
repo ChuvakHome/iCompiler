@@ -286,7 +286,10 @@ public class Token {
 			Map.entry(TokenType.COLON_OPERATOR, quoted(":")),
 			Map.entry(TokenType.COMMA_OPERATOR, quoted(",")),
 			Map.entry(TokenType.DOT_OPERATOR, quoted(".")),
-			Map.entry(TokenType.ROUTINE_EXPRESSION_OPERATOR, quoted("=>"))
+			Map.entry(TokenType.ROUTINE_EXPRESSION_OPERATOR, quoted("=>")),
+			
+			Map.entry(TokenType.SEMICOLON_DELIMITER, quoted(";")),
+			Map.entry(TokenType.LINE_FEED_DELIMITER, "LF")
 	));
 	
 	public static String quoted(String s) {

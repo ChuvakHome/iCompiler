@@ -1,0 +1,9 @@
+type int is integer
+
+routine main() is
+  var a: int; a := 1
+  var b: int; b := 2
+  var c: int; c := 3
+
+  print a, b, c
+end

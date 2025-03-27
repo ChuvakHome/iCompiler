@@ -3,7 +3,6 @@ package ru.itmo.icompiler.syntax;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -21,12 +20,20 @@ import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.lex.Token.TokenType;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
+import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.CompoundStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.PrintStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ProgramASTNode;
+import ru.itmo.icompiler.syntax.ast.ReturnStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.RoutineDeclarationASTNode;
+import ru.itmo.icompiler.syntax.ast.RoutineDefinitionASTNode;
 import ru.itmo.icompiler.syntax.ast.TypeDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableAssignmentASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableDeclarationASTNode;
+import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode.BinaryOperatorType;
 import ru.itmo.icompiler.syntax.ast.expression.BooleanValueExpressionNode;
@@ -122,26 +129,22 @@ public class SimpleParser implements Parser {
 	private Lexer lexer;
 	private List<SyntaxException> syntaxErrors;
 	
+	private String sourceName = "<source>";
 	private String[] lines;
 	
 	public SimpleParser(InputStream in) {
 		StringBuilder sb = new StringBuilder();
 		
-		this.lines = new BufferedReader(new InputStreamReader(in)).lines().peek(sb::append).toArray(String[]::new);
+		this.lines = new BufferedReader(new InputStreamReader(in)).lines().peek(line -> sb.append(line).append("\n")).toArray(String[]::new);
 		
 		this.lexer = new LexerWrapper(new DFALexer(sb.toString()));
 		this.syntaxErrors = new ArrayList<>();
 	}
 	
 	public SimpleParser(File file) throws IOException {
-		StringBuilder sb = new StringBuilder();
+		this(new FileInputStream(file));
 		
-		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
-		this.lines = br.lines().peek(sb::append).toArray(String[]::new);
-		br.close();
-		
-		this.lexer = new LexerWrapper(new DFALexer(sb.toString()));
-		this.syntaxErrors = new ArrayList<>();
+		this.sourceName = file.getName();
 	}
 
 	public SimpleParser(String s) {
@@ -207,35 +210,112 @@ public class SimpleParser implements Parser {
 		return skipToken(false, expectedTypes);
 	}
 	
+	protected Token skipDelimeter() {
+		return lexer.lookupToken(Predicate.not(LexUtils::isDelimeter));
+	}
+	
+	protected Token moveAfterDelimeter() {
+		return lexer.nextToken(LexUtils::isDelimeter);
+	}
+	
 	protected ASTNode parseIfStatement() throws SyntaxException {
-		ASTNode stmtNode;
-		
 		skipToken(TokenType.IF_KEYWORD);
-		ExpressionASTNode conditionNode = parseExpression();
-		skipToken(TokenType.THEN_KEYWORD);
-
-		ASTNode ifBody = null;
 		
-		while (lexer.lookupToken().type.noneOf(
-					TokenType.ELSE_KEYWORD,
-					TokenType.END_KEYWORD
-				)) {
+		ExpressionASTNode conditionNode = null;
+		
+		try {
+			conditionNode = parseExpression();
+		} catch (ExpressionSyntaxException e) {
+			syntaxErrors.add(e);
 			
+			lexer.lookupToken(tok -> tok.type == TokenType.THEN_KEYWORD);
 		}
+		
+		skipToken(true, TokenType.THEN_KEYWORD);
+
+		ASTNode ifBody = parseBody(tk -> tk.type.noneOf(TokenType.ELSE_KEYWORD, TokenType.END_KEYWORD));
 		
 		ASTNode elseBody = null;
 		
-		if (lexer.nextToken().type == TokenType.ELSE_KEYWORD) {
-			elseBody = parseStatement();
-	
-			stmtNode = new IfThenElseStatementASTNode(null, conditionNode, ifBody, elseBody);
+		if (lexer.lookupToken().type == TokenType.ELSE_KEYWORD) {
+			lexer.skipToken();
+			
+			elseBody = parseBody();
 		}
 			
-		stmtNode = new IfThenElseStatementASTNode(null, conditionNode, ifBody, null);
+		ASTNode stmtNode = new IfThenElseStatementASTNode(null, conditionNode, ifBody, elseBody);
 		
 		skipToken(TokenType.END_KEYWORD);
 		
 		return stmtNode;
+	}
+	
+	protected ASTNode parseForStatement() throws SyntaxException {
+		skipToken(TokenType.FOR_KEYWORD);
+		
+		String iterVar = null;
+		
+		try {
+			iterVar = skipToken(TokenType.IDENTIFIER).text;
+		} catch (SyntaxException e) {
+			syntaxErrors.add(e);
+		}
+		
+		skipToken(TokenType.IN_KEYWORD);
+		
+		ExpressionASTNode fromExpr = null, toExpr = null;
+		
+		try {
+			fromExpr = parseExpression();
+			
+			if (lexer.lookupToken().type == TokenType.RANGE_OPERATOR) {
+				lexer.skipToken();
+				
+				toExpr = parseExpression();
+			}
+		} catch (SyntaxException e) {
+			syntaxErrors.add(e);
+			
+			lexer.lookupToken(tok -> tok.type.anyOf(TokenType.REVERSE_KEYWORD, TokenType.LOOP_KEYWORD));
+		}
+		
+		boolean reversed = lexer.lookupToken().type == TokenType.REVERSE_KEYWORD;
+		
+		if (reversed)
+			lexer.skipToken();
+		
+		skipToken(true, TokenType.LOOP_KEYWORD); skipDelimeter();
+		
+		ASTNode loopBody = parseBody();
+		
+		skipToken(TokenType.END_KEYWORD);
+		
+		if (toExpr != null)
+			return new ForInRangeStatementASTNode(null, iterVar, fromExpr, toExpr, reversed, loopBody);
+		else
+			return new ForEachStatementASTNode(null, iterVar, fromExpr, reversed, loopBody);
+	}
+	
+	protected ASTNode parseWhileStatement() throws SyntaxException {
+		skipToken(TokenType.WHILE_KEYWORD);
+		
+		ExpressionASTNode conditionNode = null;
+		
+		try {
+			conditionNode = parseExpression();
+		} catch (ExpressionSyntaxException e) {
+			syntaxErrors.add(e);
+			
+			lexer.lookupToken(tok -> tok.type == TokenType.LOOP_KEYWORD);
+		}
+		
+		skipToken(true, TokenType.LOOP_KEYWORD); skipDelimeter();
+		
+		ASTNode loopBody = parseBody();
+		
+		skipToken(TokenType.END_KEYWORD);
+		
+		return new WhileStatementASTNode(null, conditionNode, loopBody);
 	}
 	
 	private void skipRoutineBlock() {
@@ -244,8 +324,15 @@ public class SimpleParser implements Parser {
 		if (lexer.isEndReached())
 			return;
 		
-		if (lexer.nextToken().type != TokenType.IS_KEYWORD)
+		Token next = lexer.nextToken(t -> LexUtils.isDelimeter(t) || t.type.anyOf(TokenType.IS_KEYWORD, TokenType.ROUTINE_EXPRESSION_OPERATOR));
+		
+		if (lexer.isEndReached() || LexUtils.isDelimeter(next))
 			return;
+		else if (next.type == TokenType.ROUTINE_EXPRESSION_OPERATOR) {
+			skipDelimeter();
+			
+			return;
+		}
 		
 		Predicate<Token> pred = tok -> tok.type.anyOf(TokenType.THEN_KEYWORD, TokenType.LOOP_KEYWORD, TokenType.END_KEYWORD);
 		
@@ -253,10 +340,24 @@ public class SimpleParser implements Parser {
 		
 		do {
 			t1 = lexer.nextToken(pred);
+			
+			if (t1.type == TokenType.END_KEYWORD)
+				break;
+			
 			t2 = lexer.nextToken(pred);
 		} while (
 			t1.type.anyOf(TokenType.THEN_KEYWORD, TokenType.LOOP_KEYWORD) && t2.type == TokenType.END_KEYWORD
 		);
+	}
+	
+	protected VariableDeclarationASTNode parseRoutineArgDecl() throws SyntaxException {
+		String argName = skipToken(TokenType.IDENTIFIER).text;
+		skipToken(TokenType.COLON_OPERATOR);
+		VarType argType = parseType();
+		
+		VariableDeclarationASTNode argDecl = new VariableDeclarationASTNode(null, argType, argName);
+		
+		return argDecl;
 	}
 	
 	protected RoutineDeclarationASTNode parseRoutineHeader() throws SyntaxException {
@@ -275,16 +376,23 @@ public class SimpleParser implements Parser {
 
 		List<VariableDeclarationASTNode> args = new ArrayList<>();
 		
-		while (lexer.lookupToken().type != TokenType.RIGHT_PARENTHESIS) {
-			String argName = skipToken(TokenType.IDENTIFIER).text;
-			skipToken(TokenType.COLON_OPERATOR);
-			VarType argType = parseType();
+		if (lexer.lookupToken().type != TokenType.RIGHT_PARENTHESIS) {
+			boolean firstArgParsed = false;
 			
-			VariableDeclarationASTNode argDecl = new VariableDeclarationASTNode(null, argType, argName);
-			args.add(argDecl);
-			
-			if (lexer.lookupToken().type == TokenType.COMMA_OPERATOR)
-				lexer.skipToken();
+			while (lexer.lookupToken().type != TokenType.RIGHT_PARENTHESIS) {
+				try {
+					if (firstArgParsed)
+						skipToken(TokenType.COMMA_OPERATOR);
+					else
+						firstArgParsed = true;
+					
+					args.add(parseRoutineArgDecl());
+				} catch (SyntaxException e) {
+					syntaxErrors.add(e);
+					
+					lexer.lookupToken(t -> t.type.anyOf(TokenType.COMMA_OPERATOR, TokenType.RIGHT_PARENTHESIS));
+				}
+			}
 		}
 		
 		skipToken(TokenType.RIGHT_PARENTHESIS);
@@ -299,8 +407,52 @@ public class SimpleParser implements Parser {
 		return new RoutineDeclarationASTNode(null, resultType, routineName, args);
 	}
 	
+	protected ASTNode parseBody(Predicate<Token> pred) throws SyntaxException {
+		ASTNode compoundStmtNode = new CompoundStatementASTNode(null);
+		
+		while (pred.test(
+			lexer.lookupToken()
+		)) {
+			try {
+				ASTNode stmt = parseStatement();
+				
+				compoundStmtNode.addChild(stmt);
+			} catch (SyntaxException e) {
+				syntaxErrors.add(e);
+			}
+		}
+		
+		return compoundStmtNode;
+	}
+	
+	protected ASTNode parseBody() throws SyntaxException {
+		return parseBody(tk -> tk.type != TokenType.END_KEYWORD);
+	}
+	
 	protected ASTNode parseRoutine() throws SyntaxException {
 		RoutineDeclarationASTNode header = parseRoutineHeader();
+		
+		if (lexer.lookupToken().type == TokenType.IS_KEYWORD) {
+			skipToken(TokenType.IS_KEYWORD); skipDelimeter();
+			
+			ASTNode routineBody = parseBody();
+			
+			skipToken(TokenType.END_KEYWORD);
+			
+			return new RoutineDefinitionASTNode(null, header, routineBody); 
+		} else if (lexer.lookupToken().type == TokenType.ROUTINE_EXPRESSION_OPERATOR) {
+			lexer.skipToken();
+			
+			try {
+				ExpressionASTNode expr = parseExpression();
+				
+				return new RoutineDefinitionASTNode(null, header, new ReturnStatementASTNode(null, expr));
+			} catch (ExpressionSyntaxException e) {
+				skipDelimeter();
+				
+				throw e;
+			}
+		}
 		
 		return header;
 	}
@@ -331,11 +483,8 @@ public class SimpleParser implements Parser {
 					
 					int arraySize = -1;
 					
-					if (lexer.lookupToken().type != TokenType.RIGHT_BRACKET) {
-						parseExpression();
-						
-						arraySize = 1;
-					}
+					if (lexer.lookupToken().type != TokenType.RIGHT_BRACKET)						
+						arraySize = Integer.parseInt(skipToken(TokenType.INTEGER_NUMERIC_LITERAL).text); // TODO: add constexpr array size calc
 					
 					skipToken(TokenType.RIGHT_BRACKET);
 					
@@ -354,23 +503,53 @@ public class SimpleParser implements Parser {
 		return VarType.INTEGER_PRIMITIVE_TYPE;
 	}
 	
-	protected VariableAssignmentASTNode parseVarAssign() throws SyntaxException {
-		String varName = skipToken(TokenType.IDENTIFIER).text;
-		skipToken(TokenType.ASSIGN_OPERATOR);
-		ExpressionASTNode exprNode = parseExpression();
+	protected void parsePrimary() throws SyntaxException {
 		
-		return new VariableAssignmentASTNode(null, varName, exprNode);
+	}
+	
+	protected ASTNode parseAssignmentOrCall() throws SyntaxException {
+		String iden = skipToken(TokenType.IDENTIFIER).text;
+		
+		if (LexUtils.isDelimeter(lexer.lookupToken()))
+			return new RoutineCallExpressionNode(null, iden);
+		
+		switch (skipToken(TokenType.LEFT_PARENTHESIS, TokenType.ASSIGN_OPERATOR).type) {
+			case ASSIGN_OPERATOR:
+				return new VariableAssignmentASTNode(null, iden, parseExpression());
+			case LEFT_PARENTHESIS:
+			default:
+				List<ExpressionASTNode> args = new ArrayList<>();
+				
+				boolean commaFlag = false;
+				
+				while (lexer.lookupToken().type != TokenType.RIGHT_PARENTHESIS) {
+					if (commaFlag)
+						skipToken(TokenType.COMMA_OPERATOR);
+					else
+						commaFlag = true;
+					
+					try {
+						args.add(parseExpression());
+					} catch (ExpressionSyntaxException e) {
+						syntaxErrors.add(e);
+						
+						lexer.lookupToken(tk -> tk.type == TokenType.COMMA_OPERATOR);
+					}
+				}
+				
+				return new RoutineCallExpressionNode(null, iden, args);
+		}
 	}
 	
 	protected ExpressionASTNode parseExpression() throws SyntaxException {
 		Token t = lexer.lookupToken();
 		
-		ExpressionASTNode node = stackExpressionParser(0);
+		ExpressionASTNode expr = stackExpressionParser(0);
 		
-		if (node == null)
+		if (expr == null)
 			throw new ExpectedAnExpessionSyntaxException(t.lineNumber, t.lineOffset);
-		
-		return node;
+			
+		return expr;
 	}
 	
 	private ExpressionASTNode stackExpressionParser(int nestingLevel) throws SyntaxException {
@@ -379,8 +558,11 @@ public class SimpleParser implements Parser {
 		BinaryOperatorType currentOpType = null;
 		
 		Stack<ExpressionASTNode> expressionStack = new Stack<>();
+
 		Stack<UnaryOperatorType> unaryOperatorsStack = new Stack<>();
-		Stack<BinaryOperatorType> binaryOperatorsStack = new Stack<>();
+		
+		Stack<BinaryOperatorType> binaryOperatorsStack = new Stack<>(); 
+		Stack<Token> binaryOperatorsTokens = new Stack<>();
 		
 		while (true) {
 			boolean switchOpFlag = true;
@@ -471,6 +653,8 @@ public class SimpleParser implements Parser {
 					}
 					
 					binaryOperatorsStack.push(binopType);
+					binaryOperatorsTokens.push(token);
+					
 					currentOpType = binopType;
 				}
 			} else {
@@ -513,15 +697,24 @@ public class SimpleParser implements Parser {
 								
 								RoutineCallExpressionNode routineCallNode = new RoutineCallExpressionNode(null, iden);
 								
-								if (lexer.lookupToken().type != TokenType.RIGHT_PARENTHESIS)
-									routineCallNode.addArguments(parseExpression());
+								boolean commaFlag = false;
 								
 								while (lexer.lookupToken().type != TokenType.RIGHT_PARENTHESIS) {
-									skipToken(false, TokenType.COMMA_OPERATOR);
-									routineCallNode.addArguments(parseExpression());
+									if (commaFlag)
+										skipToken(TokenType.COMMA_OPERATOR);
+									else
+										commaFlag = true;
+									
+									try {
+										routineCallNode.addArguments(parseExpression());
+									} catch (ExpressionSyntaxException e) {
+										syntaxErrors.add(e);
+										
+										lexer.lookupToken(tk -> tk.type == TokenType.COMMA_OPERATOR);
+									}
 								}
 								
-								skipToken(false, TokenType.RIGHT_PARENTHESIS);
+								skipToken(TokenType.RIGHT_PARENTHESIS);
 								newExprNode = routineCallNode;
 								break;
 							default:
@@ -564,6 +757,15 @@ public class SimpleParser implements Parser {
 		
 		while (!binaryOperatorsStack.isEmpty()) {
 			BinaryOperatorType binopType = binaryOperatorsStack.pop();
+			Token tk = binaryOperatorsTokens.pop();
+			
+			if (expressionStack.size() < 2) {
+				throw new ExpressionSyntaxException(
+						String.format("Binary operator \"%s\" has no second operand", tk.text), 
+						tk.lineNumber, 
+						tk.lineOffset
+					);
+			}
 			
 			ExpressionASTNode right = expressionStack.pop();
 			ExpressionASTNode left = expressionStack.pop();
@@ -574,8 +776,81 @@ public class SimpleParser implements Parser {
 		return expressionStack.isEmpty() ? null : expressionStack.pop();
 	}
 	
-	protected ASTNode parseStatement() {
+	protected ASTNode parseRoutineCall() throws SyntaxException {
 		return null;
+	}
+	
+	protected ASTNode parsePrintStatement() throws SyntaxException {
+		skipToken(TokenType.PRINT_OPERATOR);
+		
+		PrintStatementASTNode stmtNode = new PrintStatementASTNode(null);
+		
+		boolean commaExpected = false;
+		
+		while (!LexUtils.isDelimeter(lexer.lookupToken())) {
+			if (commaExpected)
+				skipToken(TokenType.COMMA_OPERATOR);
+			else
+				commaExpected = true;
+			
+			try {
+				stmtNode.addChild(parseExpression());
+			} catch (SyntaxException e) {
+				syntaxErrors.add(e);
+				
+				lexer.lookupToken(tk -> LexUtils.isDelimeter(tk) || tk.type == TokenType.COMMA_OPERATOR);
+			}
+		}
+		
+		return stmtNode;
+	}
+	
+	protected ReturnStatementASTNode parseReturnStatement() throws SyntaxException {
+		skipToken(TokenType.RETURN_KEYWORD);
+		
+		return new ReturnStatementASTNode(null, parseExpression());
+	}
+	
+	protected ASTNode parseStatement() throws SyntaxException {		
+		Token tok = lexer.lookupToken(Predicate.not(LexUtils::isDelimeter));
+		
+		ASTNode stmtNode = null;
+		
+		switch (tok.type) {
+			case VAR_KEYWORD:
+			case TYPE_KEYWORD:
+				stmtNode = parseSimpleDeclaration();
+				break;
+			case IDENTIFIER:
+				stmtNode = parseAssignmentOrCall();
+				break;
+			case IF_KEYWORD:
+				stmtNode = parseIfStatement();
+				break;
+			case FOR_KEYWORD:
+				stmtNode = parseForStatement();
+				break;
+			case WHILE_KEYWORD:
+				stmtNode = parseWhileStatement();
+				break;
+			case BREAK_KEYWORD:
+				stmtNode = new BreakStatementASTNode(null);
+				lexer.skipToken();
+				expectToken(TokenType.SEMICOLON_DELIMITER, TokenType.LINE_FEED_DELIMITER);
+				break;
+			case PRINT_OPERATOR:
+				stmtNode = parsePrintStatement();
+				break;
+			case RETURN_KEYWORD:
+				stmtNode = parseReturnStatement();
+				break;
+			default:
+				throw new UnexpectedTokenSyntaxException(tok);
+		}
+		
+		skipDelimeter();
+		
+		return stmtNode;
 	}
 	
 	protected VariableDeclarationASTNode parseVarDecl() throws SyntaxException {
@@ -614,12 +889,12 @@ public class SimpleParser implements Parser {
 					varDeclNode = new VariableDeclarationASTNode(null, type, varName);
 				
 				varDeclNode.addChild(
-						new VariableAssignmentASTNode(null, varName, node)
-					);
+					new VariableAssignmentASTNode(null, varName, node)
+				);
 			} catch (ExpressionSyntaxException e) {
 				syntaxErrors.add(e);
 				
-				lexer.nextToken(LexUtils::isDelimeter);
+				moveAfterDelimeter();
 			}
 		}
 		
@@ -634,25 +909,21 @@ public class SimpleParser implements Parser {
 		String typealias = skipToken(TokenType.IDENTIFIER).text;
 		skipToken(TokenType.IS_KEYWORD);
 		
-		return new TypeDeclarationASTNode(null, typealias, parseType());
+		VarType type = parseType();
+		
+		return new TypeDeclarationASTNode(null, typealias, type);
 	}
 	
-	protected ASTNode parseSimpleGlobalDeclaration() throws SyntaxException {
+	protected ASTNode parseSimpleDeclaration() throws SyntaxException {
 		Token tok = lexer.lookupToken();
 		
-		try {
-			switch (tok.type) {
-				case VAR_KEYWORD:
-					return parseVarDecl();
-				case TYPE_KEYWORD:
-					return parseTypeDecl();
-				default:
-					throw new UnexpectedTokenSyntaxException(null, tok);
-			}
-		} catch (SyntaxException e) {
-			lexer.nextToken(LexUtils::isDelimeter);
-			
-			throw e;
+		switch (tok.type) {
+			case VAR_KEYWORD:
+				return parseVarDecl();
+			case TYPE_KEYWORD:
+				return parseTypeDecl();
+			default:
+				throw new UnexpectedTokenSyntaxException(null, tok);
 		}
 	}
 	
@@ -661,13 +932,17 @@ public class SimpleParser implements Parser {
 		
 		try {
 			switch (tok.type) {
-				case ROUTINE_KEYWORD: {
+				case VAR_KEYWORD:
+				case TYPE_KEYWORD:
+					return parseSimpleDeclaration();
+				case ROUTINE_KEYWORD:
 					return parseRoutine();
-				}
 				case END_OF_TEXT:
 					return null;
 				default:
-					return parseSimpleGlobalDeclaration();
+					lexer.skipToken();
+					
+					throw new UnexpectedTokenSyntaxException("Expected a global declaration", tok);
 			}
 		} catch (SyntaxException e) {
 			syntaxErrors.add(e);
@@ -679,7 +954,7 @@ public class SimpleParser implements Parser {
 	public ASTNode parse() {
 		ProgramASTNode astNode = new ProgramASTNode();
 		
-		while (!lexer.isEndReached()) {
+		while (!lexer.isEndReached()) {			
 			ASTNode node = parseSingleNode();
 			
 			if (node != null)
@@ -695,13 +970,14 @@ public class SimpleParser implements Parser {
 			int spaces = e.getErrorOffset() - 1;
 			
 			System.err.printf(
-					"<source>:%d:%d: %s\n" +
-					"%d:%s\n" +
+					"%s:%d:%d: %s\n" +
+					"%s\n" +
 					"%s^\n",
 					
+					sourceName,
 					e.getErrorLine(), e.getErrorOffset(), e.getMessage(),
-					e.getErrorLine(), lines[line],
-					" ".repeat(spaces + String.valueOf(e.getErrorLine()).length() + 1)
+					lines[line],
+					" ".repeat(spaces)
 				);
 		}
 	}

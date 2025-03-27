@@ -1,0 +1,6 @@
+routine main(x: integer, y, flag: boolean) is
+  var a: integer is 42 +
+  var b is x + * a
+
+  print x
+end

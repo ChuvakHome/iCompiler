@@ -39,7 +39,7 @@ public class RoutineDeclarationASTNode extends ASTNode {
 		this.argumentsDeclarations.addAll(argumentsDeclarations);
 	}
 	
-	public String toString() {
+	public String toString(int tabs) {
 		return String.format("%s[routine = %s, resultType = %s, args = %s]",
 					getNodeType(),
 					routineName,

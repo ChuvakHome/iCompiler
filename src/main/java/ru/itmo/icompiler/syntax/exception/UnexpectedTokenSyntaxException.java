@@ -8,23 +8,30 @@ import ru.itmo.icompiler.lex.Token.TokenType;
 public class UnexpectedTokenSyntaxException extends SyntaxException {
 	private Token tok;
 	
-	public UnexpectedTokenSyntaxException(String message, int[] lines, Token tok, TokenType... expected) {
+	public UnexpectedTokenSyntaxException(String message, int[] lines, Token tok) {
 		super(message, lines, tok.lineNumber, tok.lineOffset);
 		this.tok = tok;
 	}
 	
+	public UnexpectedTokenSyntaxException(String message, Token tok) {
+		this(message, new int[] { tok.lineNumber }, tok);
+	}
+	
 	public UnexpectedTokenSyntaxException(int[] lines, Token tok, TokenType... expected) {
 		this(
-			String.format(
+			expected != null && expected.length > 0
+			? String.format(
 					"Unexpected token: expected %s, got \"%s\"", 
 					String.join(
 							", ", 
 							Arrays.stream(expected).map(Token.TOKENS_TEXT::get).toList()), 
 					tok.text
+				)
+			: String.format(
+					"Unexpected token: \"%s\"", tok.text
 				),
 			lines,
-			tok,
-			expected
+			tok
 		);
 	}
 	

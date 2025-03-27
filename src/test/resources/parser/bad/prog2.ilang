@@ -1,0 +1,13 @@
+routine boolean() is
+  var retval is 42
+
+  print retval
+end
+
+routine f() is
+  var x: integer is boolean
+  
+  if x op 0 then
+    print 1, boolean, 2
+  end
+end

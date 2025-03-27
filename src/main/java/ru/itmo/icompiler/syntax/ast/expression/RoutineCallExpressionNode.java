@@ -10,11 +10,15 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 	private String routineName;
 	private List<ExpressionASTNode> arguments;
 	
-	public RoutineCallExpressionNode(ASTNode parentNode, String routineName, ExpressionASTNode... arguments) {
+	public RoutineCallExpressionNode(ASTNode parentNode, String routineName, List<ExpressionASTNode> arguments) {
 		super(parentNode, ExpressionNodeType.FUN_CALL_EXPR_NODE);
 		
 		this.routineName = routineName;
-		this.arguments = new ArrayList<>(Arrays.asList(arguments));
+		this.arguments = new ArrayList<>(arguments);
+	}
+	
+	public RoutineCallExpressionNode(ASTNode parentNode, String routineName, ExpressionASTNode... arguments) {
+		this(parentNode, routineName, new ArrayList<>(Arrays.asList(arguments)));
 	}
 	
 	public void addArguments(ExpressionASTNode... arguments) {

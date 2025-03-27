@@ -36,12 +36,36 @@ public class ASTNode {
 			node.setParentNode(this);
 	}
 	
+	public void addChildren(List<? extends ASTNode> nodes) {
+		for (ASTNode child: nodes)
+			addChild(child);
+	}
+	
 	public List<ASTNode> getChildren() {
 		return children;
 	}
 	
+//	public String toString(int tabs) {
+//		return String.format("%s", toString());
+//	}
+	
+	protected List<String> stringifyChildren(int tabs) {
+		String sep = "\n" + " ".repeat((tabs + 1) * 4);
+		
+		return children.stream().map(t -> String.format("%s%s", sep, t.toString(tabs))).toList();
+	}
+	
 	public String toString(int tabs) {
-		return String.format("%s", toString());
+		return children.isEmpty()
+				? toString()
+				: String.format(
+					"%s[%s]",
+					toString(),
+					String.join(
+						",",
+						stringifyChildren(tabs + 1)
+					)
+				);
 	}
 	
 	public String toString() {
@@ -63,11 +87,18 @@ public class ASTNode {
 		
 		EXPR_STMT_NODE,
 		
-		IF_STMT_NODE,
 		IF_ELSE_STMT_NODE,
 		WHILE_LOOP_NODE,
-		FOR_LOOP_NODE,
+		
+		FOR_EACH_LOOP_NODE,
+		FOR_IN_RANGE_LOOP_NODE,
+		
+		BREAK_STMT_NODE,
+		
+		RETURN_STMT_NODE,
 		
 		PRINT_STMT_NODE,
+		
+		COMPOUND_STMT_NODE
 	}
 }

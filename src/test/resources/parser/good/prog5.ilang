@@ -1,0 +1,23 @@
+routine f(x: integer): integer
+
+routine g(x: integer): integer
+
+routine f(x: integer): integer is
+  if x <= 0 then
+    return 0
+  else
+    return x + f(x - 1) + g(x)
+  end
+end
+
+routine g(x: integer): integer is
+  if x <= 0 then
+    return 0
+  else
+    return x + g(x - 2) + f(x - 1)
+  end
+end
+
+routine main() is
+  print f(5)
+end
