@@ -1,5 +1,6 @@
 package ru.itmo.icompiler.syntax.ast;
 
+import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
 public class ForEachStatementASTNode extends LoopStatementASTNode {
@@ -7,7 +8,7 @@ public class ForEachStatementASTNode extends LoopStatementASTNode {
 	private ExpressionASTNode arrayExpr;
 	private boolean reversed;
 	
-	public ForEachStatementASTNode(ASTNode parentNode, String iterVariable, ExpressionASTNode arrayExpr, boolean reversed, ASTNode bodyNode) {
+	public ForEachStatementASTNode(ASTNode parentNode, String iterVariable, ExpressionASTNode arrayExpr, boolean reversed, CompoundStatementASTNode bodyNode) {
 		super(parentNode, ASTNodeType.FOR_EACH_LOOP_NODE, bodyNode);
 		
 		this.iterVar = iterVariable;
@@ -39,5 +40,9 @@ public class ForEachStatementASTNode extends LoopStatementASTNode {
 				sep, arrayExpr != null ? arrayExpr.toString(tabs + 1) : "<none>",
 				stringifyChildren(tabs + 1)
 			);
+	}
+	
+	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg);
 	}
 }

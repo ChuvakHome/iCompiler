@@ -30,9 +30,5 @@ routine main() is
   arr[4] := 1
   arr[5] := 3
   bubble_sort(arr)
-  print (arr[1] = 1) and 
-        (arr[2] = 2) and 
-        (arr[3] = 2) and 
-        (arr[4] = 3) and 
-        (arr[5] = 5)
+  print (arr[1] = 1) and (arr[2] = 2) and (arr[3] = 2) and (arr[4] = 3) and (arr[5] = 5)
 end

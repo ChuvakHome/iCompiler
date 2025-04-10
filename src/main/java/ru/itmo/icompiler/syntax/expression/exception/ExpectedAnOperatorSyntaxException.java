@@ -8,7 +8,7 @@ public class ExpectedAnOperatorSyntaxException extends ExpressionSyntaxException
 	public ExpectedAnOperatorSyntaxException(int[] enclosingLines, Token token) {
 		super(
 			String.format(
-				"Expected an operator, got \"%s\"",
+				"expected an operator, got \"%s\"",
 				token.text
 			), 
 			enclosingLines,

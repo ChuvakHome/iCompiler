@@ -1,0 +1,5 @@
+routine main() is
+  var переменная is 32
+  var не_константа is 10
+  print переменная + не_константа
+end

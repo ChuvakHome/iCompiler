@@ -1,12 +1,16 @@
 package ru.itmo.icompiler.syntax.ast.expression;
 
+import ru.itmo.icompiler.lex.Token;
+import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class BooleanValueExpressionNode extends ExpressionASTNode {
 	private boolean value;
 	
-	public BooleanValueExpressionNode(ASTNode parentNode, boolean value) {
-		super(parentNode, ExpressionNodeType.BOOLEAN_VALUE_EXPR_NODE);
+	public BooleanValueExpressionNode(ASTNode parentNode, Token startToken, boolean value) {
+		super(parentNode, startToken, ExpressionNodeType.BOOLEAN_VALUE_EXPR_NODE);
 		
 		this.value = value;
 	}
@@ -24,5 +28,9 @@ public class BooleanValueExpressionNode extends ExpressionASTNode {
 					getNodeType(), getExpressionNodeType(),
 					value
 				);
+	}
+	
+	public VarType inferType(SemanticContext ctx) throws SemanticException {
+		return VarType.BOOLEAN_PRIMITIVE_TYPE;
 	}
 }

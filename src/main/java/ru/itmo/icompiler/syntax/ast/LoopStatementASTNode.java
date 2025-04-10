@@ -1,9 +1,9 @@
 package ru.itmo.icompiler.syntax.ast;
 
 public abstract class LoopStatementASTNode extends ASTNode {
-	protected ASTNode bodyNode;
+	protected CompoundStatementASTNode bodyNode;
 	
-	public LoopStatementASTNode(ASTNode parentNode, ASTNodeType nodeType, ASTNode bodyNode) {
+	public LoopStatementASTNode(ASTNode parentNode, ASTNodeType nodeType, CompoundStatementASTNode bodyNode) {
 		super(parentNode, nodeType);
 		
 		this.bodyNode = bodyNode;

@@ -1,5 +1,6 @@
 package ru.itmo.icompiler.syntax.ast;
 
+import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
 public class ForInRangeStatementASTNode extends LoopStatementASTNode {
@@ -8,7 +9,7 @@ public class ForInRangeStatementASTNode extends LoopStatementASTNode {
 	private ExpressionASTNode toExpr;
 	private boolean reversed;
 	
-	public ForInRangeStatementASTNode(ASTNode parentNode, String iterVariable, ExpressionASTNode fromExpr, ExpressionASTNode toExpr, boolean reversed, ASTNode bodyNode) {
+	public ForInRangeStatementASTNode(ASTNode parentNode, String iterVariable, ExpressionASTNode fromExpr, ExpressionASTNode toExpr, boolean reversed, CompoundStatementASTNode bodyNode) {
 		super(parentNode, ASTNodeType.FOR_IN_RANGE_LOOP_NODE, bodyNode);
 		
 		this.iterVar = iterVariable;
@@ -46,5 +47,9 @@ public class ForInRangeStatementASTNode extends LoopStatementASTNode {
 				sep, toExpr != null ? toExpr.toString(tabs + 1) : "<none>",
 				stringifyChildren(tabs + 1)
 			);
+	}
+	
+	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg);
 	}
 }

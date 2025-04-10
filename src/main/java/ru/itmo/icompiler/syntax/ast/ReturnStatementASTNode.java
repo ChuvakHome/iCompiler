@@ -1,5 +1,6 @@
 package ru.itmo.icompiler.syntax.ast;
 
+import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
 public class ReturnStatementASTNode extends ASTNode {
@@ -17,5 +18,9 @@ public class ReturnStatementASTNode extends ASTNode {
 	
 	public String toString(int tabs) {
 		return String.format("%s[arg = %s]", getNodeType(), resultNode.toString(tabs));
+	}
+	
+	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg);
 	}
 }

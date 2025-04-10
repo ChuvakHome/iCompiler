@@ -8,8 +8,6 @@ import ru.itmo.icompiler.syntax.exception.SyntaxException;
 public interface Parser {
 	List<SyntaxException> getSyntaxErrors();
 	
-	void printErrors();
-	
 	ASTNode parse();
 	
 	boolean isEndReached();

@@ -1,5 +1,9 @@
 package ru.itmo.icompiler.syntax.ast;
 
+import ru.itmo.icompiler.exception.CompilerException;
+import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
 public class IfThenElseStatementASTNode extends ASTNode {
@@ -49,5 +53,17 @@ public class IfThenElseStatementASTNode extends ASTNode {
 							sep, conditionExprNode != null ? conditionExprNode.toString(tabs + 1) : "<none>",
 							sep, trueBranchNode.toString(tabs + 1)
 						);
+	}
+	
+	@Override
+	public void validate(SemanticContext ctx) throws CompilerException {
+		if (conditionExprNode != null) {
+			conditionExprNode.validate(ctx);
+			conditionExprNode.checkType(ctx, VarType.BOOLEAN_PRIMITIVE_TYPE);
+		}
+	}
+	
+	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg);
 	}
 }

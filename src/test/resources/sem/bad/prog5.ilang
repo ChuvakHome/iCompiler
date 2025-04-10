@@ -1,0 +1,7 @@
+type nat is integer
+
+routine main() is
+  type nat2 is integer
+  nat()
+  nat2()
+end

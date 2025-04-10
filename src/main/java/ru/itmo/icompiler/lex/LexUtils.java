@@ -28,4 +28,8 @@ public class LexUtils {
 	public static Predicate<Token> isTypeNoneOf(TokenType... types) {
 		return tk -> tk.type.noneOf(types);
 	}
+	
+	public static String tabToSpaces(int tabWidth) {
+		return " ".repeat(Math.max(tabWidth, 1));
+	}
 }

@@ -1,0 +1,61 @@
+type TestResults is record
+  var succeed: integer
+  var failed: integer
+end
+
+var _current_test is false
+var _test_results : TestResults
+
+routine test_start() is
+  _current_test := true
+end
+
+routine test_end() is
+  if _current_test
+  then
+    _test_results.succeed := _test_results.succeed + 1
+  else
+    _test_results.failed := _test_results.failed + 1
+  end
+  _current_test := false
+end
+
+routine assert(assertion : boolean) is
+  _current_test := _current_test and assertion
+end
+
+routine test_results() : TestResults is
+  return _test_results
+end
+
+routine abs(x: integer): integer is
+  if x >= 0 
+  then
+      return x
+  end
+  return -x
+end
+
+routine is_near(a: real, b: real): boolean is
+  return abs(a - b) <= 0.0001
+end
+
+routine main() is
+  test_start()
+  assert(16 % 2 = 0)
+  assert(8 % 2 = 0)
+  test_end()
+
+  test_start()
+  assert(13 % 3 = 0)
+  assert(1263672 % 3 = 0)
+  test_end()
+
+  test_start()
+  assert(is_near(1.2 * 1.2 - 4.2 / 1.2 + 2.4, 0))
+  test_end()
+
+  var result is test_results()
+  print result.succeed
+  print result.failed
+end

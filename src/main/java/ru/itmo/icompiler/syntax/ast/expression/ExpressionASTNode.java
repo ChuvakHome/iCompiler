@@ -1,13 +1,27 @@
 package ru.itmo.icompiler.syntax.ast.expression;
 
+import java.util.Arrays;
+
+import ru.itmo.icompiler.lex.Token;
+import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.exception.SemanticException;
+import ru.itmo.icompiler.semantic.exception.UnexpectedTypeSemanticException;
+import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
-public class ExpressionASTNode extends ASTNode {
+public abstract class ExpressionASTNode extends ASTNode {
+	private Token startToken;
 	private ExpressionNodeType exprNodeType;
 	
-	public ExpressionASTNode(ASTNode parentNode, ExpressionNodeType exprNodeType) {
+	public ExpressionASTNode(ASTNode parentNode, Token startToken, ExpressionNodeType exprNodeType) {
 		super(parentNode, ASTNodeType.EXPRESSION_NODE);
+		this.startToken = startToken;
 		this.exprNodeType = exprNodeType;
+	}
+	
+	public Token getStartToken() {
+		return startToken;
 	}
 	
 	public ExpressionNodeType getExpressionNodeType() {		
@@ -23,6 +37,24 @@ public class ExpressionASTNode extends ASTNode {
 					getNodeType(),
 					exprNodeType
 				);
+	}
+	
+	public void checkType(SemanticContext ctx, VarType... expectedTypes) throws SemanticException {
+		VarType actualType = inferType(ctx); 
+		
+		if (Arrays.stream(expectedTypes).noneMatch(actualType::isConformingType))
+			throw new UnexpectedTypeSemanticException(
+					Arrays.asList(expectedTypes), 
+					actualType, 
+					getStartToken().lineNumber,
+					getStartToken().lineOffset
+				);
+	}
+	
+	public abstract VarType inferType(SemanticContext ctx) throws SemanticException;
+	
+	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg);
 	}
 	
 	public static enum ExpressionNodeType {

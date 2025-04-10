@@ -9,6 +9,8 @@ import ru.itmo.compiler.reader.TextReader;
 import ru.itmo.icompiler.lex.Token.TokenType;
 
 public class DFALexer implements Lexer {
+	public static final int DEFAULT_TAB_SIZE = 4;
+	
 	private static enum DFALexerState {
 		INIT_STATE,
 		STRING_OR_IDENTIFIER_STATE,
@@ -118,7 +120,7 @@ public class DFALexer implements Lexer {
 						startLineNumber = lineNumber;
 						startLineOffset = lineOffset;
 						
-						tokenTextSB.append(ch);
+						tokenTextSB.append(ch == '\t' ? LexUtils.tabToSpaces(DEFAULT_TAB_SIZE) : ch);
 					}
 					
 					break;
@@ -205,7 +207,7 @@ public class DFALexer implements Lexer {
 					char ch = reader.lookupChar();
 					
 					if (isWhitespace(ch)) {
-						tokenTextSB.append(ch);
+						tokenTextSB.append(ch == '\t' ? LexUtils.tabToSpaces(DEFAULT_TAB_SIZE) : ch);
 						reader.toNextChar();
 						++lineOffset;
 					}

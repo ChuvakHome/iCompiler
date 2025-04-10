@@ -1,0 +1,11 @@
+routine main() is
+  var x is 1337
+
+  if x > 0 then
+    var x: integer is 32
+    x := x + 10
+    print x                  // 42
+  end
+
+  print x                    // 1337
+end

@@ -3,7 +3,11 @@ package ru.itmo.icompiler.syntax.ast;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ASTNode {
+import ru.itmo.icompiler.exception.CompilerException;
+import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
+
+public abstract class ASTNode {
 	private ASTNode parentNode;
 	private ASTNodeType nodeType;
 	protected List<ASTNode> children;
@@ -25,6 +29,11 @@ public class ASTNode {
 			parentNode.addChild(this);
 	}
 	
+	public void detach() {
+		if (parentNode != null)
+			parentNode.removeChild(this);
+	}
+	
 	public ASTNode getParentNode() {
 		return parentNode;
 	}
@@ -41,8 +50,24 @@ public class ASTNode {
 			addChild(child);
 	}
 	
+	public void removeChild(ASTNode child) {
+		if (child == null || this != child.getParentNode())
+			return;
+		
+		children.remove(child);
+		child.setParentNode(null);
+	}
+	
 	public List<ASTNode> getChildren() {
 		return children;
+	}
+	
+	public ASTNode getChild(int i) {
+		return children.get(i);
+	}
+	
+	public void validate(SemanticContext ctx) throws CompilerException {
+		
 	}
 	
 //	public String toString(int tabs) {
@@ -54,6 +79,8 @@ public class ASTNode {
 		
 		return children.stream().map(t -> String.format("%s%s", sep, t.toString(tabs))).toList();
 	}
+	
+	public abstract<R, A> R accept(ASTVisitor<R, A> visitor, A arg);
 	
 	public String toString(int tabs) {
 		return children.isEmpty()

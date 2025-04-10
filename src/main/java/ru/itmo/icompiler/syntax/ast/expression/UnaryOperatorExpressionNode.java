@@ -2,14 +2,19 @@ package ru.itmo.icompiler.syntax.ast.expression;
 
 import java.util.Locale;
 
+import ru.itmo.icompiler.exception.CompilerException;
+import ru.itmo.icompiler.lex.Token;
+import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 	private UnaryOperatorType unopType;
 	private ExpressionASTNode value;
 	
-	public UnaryOperatorExpressionNode(ASTNode parentNode, UnaryOperatorType operatorType, ExpressionASTNode value) {
-		super(parentNode, ExpressionNodeType.UNOP_EXPR_NODE);
+	public UnaryOperatorExpressionNode(ASTNode parentNode, Token startToken, UnaryOperatorType operatorType, ExpressionASTNode value) {
+		super(parentNode, startToken, ExpressionNodeType.UNOP_EXPR_NODE);
 		
 		this.unopType = operatorType;
 		setValue(value);
@@ -57,6 +62,30 @@ public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 					sep, unopType,
 					sep, value.toString(tabs + 1)
 				);
+	}
+	
+	@Override
+	public void validate(SemanticContext ctx) throws CompilerException {
+		value.validate(ctx);
+		
+		switch (unopType) {
+			case NOT_BINOP:
+				value.checkType(ctx, VarType.BOOLEAN_PRIMITIVE_TYPE);
+				break;
+			default:
+				value.checkType(ctx, VarType.INTEGER_PRIMITIVE_TYPE, VarType.REAL_PRIMITIVE_TYPE);
+				break;
+		}
+	}
+	
+	@Override
+	public VarType inferType(SemanticContext ctx) throws SemanticException {
+		switch (unopType) {
+			case NOT_BINOP:
+				return VarType.BOOLEAN_PRIMITIVE_TYPE;
+			default:
+				return value.inferType(ctx);
+		}
 	}
 
 	public static enum UnaryOperatorType {

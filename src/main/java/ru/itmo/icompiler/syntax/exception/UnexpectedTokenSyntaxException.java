@@ -21,14 +21,14 @@ public class UnexpectedTokenSyntaxException extends SyntaxException {
 		this(
 			expected != null && expected.length > 0
 			? String.format(
-					"Unexpected token: expected %s, got \"%s\"", 
+					"unexpected token: expected %s, got \"%s\"", 
 					String.join(
 							", ", 
 							Arrays.stream(expected).map(Token.TOKENS_TEXT::get).toList()), 
 					tok.text
 				)
 			: String.format(
-					"Unexpected token: \"%s\"", tok.text
+					"unexpected token: \"%s\"", tok.text
 				),
 			lines,
 			tok
@@ -45,7 +45,7 @@ public class UnexpectedTokenSyntaxException extends SyntaxException {
 	
 	public static class UnexpectedEndOfTextSyntaxException extends UnexpectedTokenSyntaxException {
 		public UnexpectedEndOfTextSyntaxException(int line, int offset) {
-			super("Unexpected end of text", new int[]{ line }, new Token(line, offset, TokenType.END_OF_TEXT, ""));
+			super("unexpected end of text", new int[]{ line }, new Token(line, offset, TokenType.END_OF_TEXT, ""));
 		}
 	}
 }
