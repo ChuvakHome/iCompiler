@@ -180,6 +180,7 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 
 	@Override
 	public SemanticContext visit(ForInRangeStatementASTNode node, SemanticContext ctx) {
+		
 		node.getBody().accept(this, ctx);
 		
 		return ctx;

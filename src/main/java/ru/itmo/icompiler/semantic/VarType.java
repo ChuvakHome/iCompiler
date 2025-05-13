@@ -3,29 +3,29 @@ package ru.itmo.icompiler.semantic;
 public abstract class VarType {
 	public static final VarType BOOLEAN_PRIMITIVE_TYPE = new PrimitiveType("boolean") {
 		@Override
-		public boolean isConformingType(VarType type) {
+		public boolean isConvertibleTo(VarType type) {
 			return type.getTag() == VarType.Tag.PRIMITIVE && type != VarType.VOID_TYPE;
 		}	
 	};
 	
 	public static final VarType INTEGER_PRIMITIVE_TYPE = new PrimitiveType("integer") {
 		@Override
-		public boolean isConformingType(VarType type) {
+		public boolean isConvertibleTo(VarType type) {
 			return type.getTag() == VarType.Tag.PRIMITIVE && type != VarType.VOID_TYPE;
 		}
 	};
 	
 	public static final VarType REAL_PRIMITIVE_TYPE = new PrimitiveType("real") {
 		@Override
-		public boolean isConformingType(VarType type) {
+		public boolean isConvertibleTo(VarType type) {
 			return type.getTag() == VarType.Tag.PRIMITIVE && type != VarType.VOID_TYPE && type != VarType.BOOLEAN_PRIMITIVE_TYPE;
 		}
 	};
 	
 	public static final VarType VOID_TYPE = new PrimitiveType("void") {
 		@Override
-		public boolean isConformingType(VarType type) {
-			return false;
+		public boolean isConvertibleTo(VarType type) {
+			return type == this;
 		}
 	};
 	
@@ -36,7 +36,7 @@ public abstract class VarType {
 		}
 
 		@Override
-		public boolean isConformingType(VarType type) {
+		public boolean isConvertibleTo(VarType type) {
 			return false;
 		}
 	};
@@ -66,7 +66,7 @@ public abstract class VarType {
 	
 	public abstract boolean equals(Object o);
 	
-	public abstract boolean isConformingType(VarType type);
+	public abstract boolean isConvertibleTo(VarType type);
 	
 	public boolean isAlias() {
 		return false;
@@ -76,8 +76,8 @@ public abstract class VarType {
 		return typename;
 	}
 	
-	public static abstract class PrimitiveType extends VarType {
-		public PrimitiveType(String typename) {
+	private static abstract class PrimitiveType extends VarType {
+		private PrimitiveType(String typename) {
 			super(Tag.PRIMITIVE, typename);
 		}
 		

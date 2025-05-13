@@ -25,11 +25,11 @@ public class ArrayType extends CompoundType {
 	}
 
 	@Override
-	public boolean isConformingType(VarType type) {
+	public boolean isConvertibleTo(VarType type) {
 		if (type.getTag() != VarType.Tag.ARRAY)
 			return false;
 		
-		return ((ArrayType) type).elementType.isConformingType(elementType);
+		return ((ArrayType) type).elementType.isConvertibleTo(elementType);
 	}
 	
 	public static class SizedArrayType extends ArrayType {
@@ -54,14 +54,14 @@ public class ArrayType extends CompoundType {
 		}
 
 		@Override
-		public boolean isConformingType(VarType type) {
+		public boolean isConvertibleTo(VarType type) {
 			if (type.getTag() != VarType.Tag.ARRAY)
 				return false;
 			
 			if (type instanceof SizedArrayType arrayType)
-				return size == arrayType.size && arrayType.elementType.isConformingType(elementType);
+				return size == arrayType.size && arrayType.elementType.isConvertibleTo(elementType);
 			
-			return super.isConformingType(type);
+			return super.isConvertibleTo(type);
 		}
 	}
 }

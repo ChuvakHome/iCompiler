@@ -29,6 +29,21 @@ public abstract class ASTNode {
 			parentNode.addChild(this);
 	}
 	
+	public void insertAdjacentBefore(ASTNode node) {
+		if (node == null)
+			return;
+		
+		if (parentNode != null) {
+			int index = parentNode.children.indexOf(this);
+						
+			parentNode.addChild(index, node);
+		}
+
+		node.parentNode = parentNode;
+		detach();
+		node.addChild(this);
+	}
+	
 	public void detach() {
 		if (parentNode != null)
 			parentNode.removeChild(this);
@@ -38,10 +53,23 @@ public abstract class ASTNode {
 		return parentNode;
 	}
 	
+	public void addChild(int index, ASTNode node) {
+		if (node == null)
+			return;
+		
+		children.add(index, node);
+		
+		if (node.parentNode != this)
+			node.setParentNode(this);
+	}
+	
 	public void addChild(ASTNode node) {
+		if (node == null)
+			return;
+		
 		children.add(node);
 		
-		if (node != null && node.parentNode != this)
+		if (node.parentNode != this)
 			node.setParentNode(this);
 	}
 	

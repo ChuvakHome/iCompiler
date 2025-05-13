@@ -15,13 +15,17 @@ public class IfThenElseStatementASTNode extends ASTNode {
 		super(parentNode, ASTNodeType.IF_ELSE_STMT_NODE);
 
 		conditionExprNode = condition;
-		addChild(conditionExprNode);
+		addChild(condition);
 		
 		trueBranchNode = trueBranch;
-		addChild(trueBranchNode);
+		addChild(trueBranch);
 		
 		elseBranchNode = elseBranch;
-		addChild(elseBranchNode);
+		addChild(elseBranch);
+	}
+	
+	public void setConditionExpression(ExpressionASTNode conditionExpr) {
+		this.conditionExprNode = conditionExpr;
 	}
 	
 	public ExpressionASTNode getConditionExpression() {
@@ -38,7 +42,7 @@ public class IfThenElseStatementASTNode extends ASTNode {
 	
 	public String toString(int tabs) {
 		String sep = "\n" + " ".repeat((tabs + 1) * 4);
-			
+		
 		return elseBranchNode != null 
 				? String.format(
 							"%s[%scondition = %s,%sbranch1 = %s,%sbranch0 = %s]",

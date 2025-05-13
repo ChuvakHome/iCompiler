@@ -13,6 +13,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 
+import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
+import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor;
+import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
 import ru.itmo.icompiler.exception.CompilerException;
 import ru.itmo.icompiler.lex.DFALexer;
 import ru.itmo.icompiler.lex.LexUtils;
@@ -87,6 +90,19 @@ public class ICompiler {
 		globalScope.clear();
 		SimpleASTVisitor vis = new SimpleASTVisitor(exprVisitor);
 		parseResult.accept(vis, new SemanticContext(compilerErrors, globalScope));
+		
+		System.out.println("AFTER SEMANTIC RESOLVING:\n" + parseResult.toString(0));
+	}
+	
+	public void emitCode() {
+		if (parseResult == null)
+			return;
+		
+		JVMCodeEmitterVisitor codeEmitVisitor = new JVMCodeEmitterVisitor();
+		
+		List<JVMBytecodeEntity> entities = parseResult.accept(codeEmitVisitor, new ExpressionVisitorContext());
+		
+		entities.forEach(System.out::println);
 	}
 	
 	public void printCompilerErrors() {
@@ -247,7 +263,7 @@ public class ICompiler {
 					+ "end";
 			
 //			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/bad/experiment.ilang"));
-			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/bad/prog11.ilang"));
+			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/test.ilang"));
 			
 			ASTNode n = compiler.parseProgram();
 			System.out.println(n.toString(0));
@@ -269,6 +285,9 @@ public class ICompiler {
 //			}
 			
 			compiler.printCompilerErrors();
+			
+			if (compiler.compilerErrors.isEmpty())
+				compiler.emitCode();
 			
 			if (true)
 				return;

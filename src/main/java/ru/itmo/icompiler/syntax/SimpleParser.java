@@ -36,6 +36,7 @@ import ru.itmo.icompiler.syntax.ast.expression.ArrayAcessExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode.BinaryOperatorType;
 import ru.itmo.icompiler.syntax.ast.expression.BooleanValueExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.EmptyExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.IntegerValueExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.PropertyAccessExpressionNode;
@@ -1156,11 +1157,19 @@ public class SimpleParser implements Parser {
 	protected ReturnStatementASTNode parseReturnStatement() throws SyntaxException {
 		skipToken(TokenType.RETURN_KEYWORD);
 		
-		ExpressionASTNode expr = parseExpression();
+		ExpressionASTNode returnValueNode;
 		
-		expectToken(TokenType.LINE_FEED_DELIMITER, TokenType.SEMICOLON_DELIMITER);
+		Token tk = lexer.lookupToken();
 		
-		return new ReturnStatementASTNode(null, expr);
+		if (LexUtils.isDelimeter(tk))
+			returnValueNode = new EmptyExpressionNode(null, tk);
+		else {
+			returnValueNode = parseExpression();
+			
+			expectToken(TokenType.LINE_FEED_DELIMITER, TokenType.SEMICOLON_DELIMITER);
+		}
+		
+		return new ReturnStatementASTNode(null, returnValueNode);
 	}
 	
 	protected ASTNode parseStatement() throws SyntaxException {		

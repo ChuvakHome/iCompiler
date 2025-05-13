@@ -12,12 +12,19 @@ public class ReturnStatementASTNode extends ASTNode {
 		this.resultNode = resultNode;
 	}
 	
+	public void setResultNode(ExpressionASTNode resultNode) {
+		this.resultNode = resultNode;
+	}
+	
 	public ExpressionASTNode getResultNode() {
 		return resultNode;
 	}
 	
 	public String toString(int tabs) {
-		return String.format("%s[arg = %s]", getNodeType(), resultNode.toString(tabs));
+		if (getResultNode() != null)
+			return String.format("%s[arg = %s]", getNodeType(), resultNode.toString(tabs));
+		
+		return getNodeType().toString();
 	}
 	
 	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {

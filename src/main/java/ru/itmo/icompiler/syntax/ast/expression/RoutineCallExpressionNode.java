@@ -17,25 +17,44 @@ import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.semantic.exception.TooFewArgumentsForRoutineCallSemanticException;
 import ru.itmo.icompiler.semantic.exception.TooManyArgumentsForRoutineCallSemanticException;
 import ru.itmo.icompiler.semantic.exception.UndefinedRoutineSemanticException;
+import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class RoutineCallExpressionNode extends ExpressionASTNode {
 	private String routineName;
+	private FunctionType routineType;
 	private List<ExpressionASTNode> arguments;
 	
-	public RoutineCallExpressionNode(ASTNode parentNode, Token startToken, String routineName, List<ExpressionASTNode> arguments) {
+	public RoutineCallExpressionNode(ASTNode parentNode, Token startToken, String routineName, FunctionType routineType, List<ExpressionASTNode> arguments) {
 		super(parentNode, startToken, ExpressionNodeType.FUN_CALL_EXPR_NODE);
 		
+		this.routineType = routineType;
 		this.routineName = routineName;
 		this.arguments = new ArrayList<>(arguments);
 	}
 	
+	public RoutineCallExpressionNode(ASTNode parentNode, Token startToken, String routineName, List<ExpressionASTNode> arguments) {
+		this(parentNode, startToken, routineName, null, arguments);
+	}
+	
+	public RoutineCallExpressionNode(ASTNode parentNode, Token startToken, FunctionType routineType, ExpressionASTNode... arguments) {
+		this(parentNode, startToken, startToken.text, routineType, new ArrayList<>(Arrays.asList(arguments)));
+	}
+	
 	public RoutineCallExpressionNode(ASTNode parentNode, Token startToken, ExpressionASTNode... arguments) {
-		this(parentNode, startToken, startToken.text, new ArrayList<>(Arrays.asList(arguments)));
+		this(parentNode, startToken, null, arguments);
 	}
 	
 	public void addArguments(ExpressionASTNode... arguments) {
 		this.arguments.addAll(Arrays.asList(arguments));
+	}
+	
+	public void setRoutineType(FunctionType routineType) {
+		this.routineType = routineType;
+	}
+	
+	public FunctionType getRoutineType() {
+		return routineType;
 	}
 	
 	public String getRoutineName() {
@@ -44,6 +63,11 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 	
 	public List<ExpressionASTNode> getArguments() {
 		return arguments;
+	}
+	
+	@Override
+	public<R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg); 
 	}
 	
 	public String toString() {
@@ -107,7 +131,7 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 	}
 
 	@Override
-	public VarType inferType(SemanticContext ctx) throws SemanticException {
+	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
 		FunctionType varType = ctx.getScope().deepLookupRoutine(routineName);
 		
 		return varType.getReturnType();

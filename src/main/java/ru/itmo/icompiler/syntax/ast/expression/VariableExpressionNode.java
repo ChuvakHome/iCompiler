@@ -6,6 +6,7 @@ import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.semantic.exception.UndefinedVariableSemanticException;
+import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class VariableExpressionNode extends ExpressionASTNode {
@@ -21,6 +22,11 @@ public class VariableExpressionNode extends ExpressionASTNode {
 		return variable;
 	}
 	
+	@Override
+	public<R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg); 
+	}
+	
 	public String toString() {
 		return String.format("%s::%s{var = %s}",
 					getNodeType(), getExpressionNodeType(),
@@ -32,7 +38,8 @@ public class VariableExpressionNode extends ExpressionASTNode {
 		SemUtils.checkEntity(variable, ctx, true, new UndefinedVariableSemanticException(variable, getStartToken().lineNumber, getStartToken().lineOffset));
 	}
 	
-	public VarType inferType(SemanticContext ctx) throws SemanticException {
+	@Override
+	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
 		VarType varType = ctx.getScope().deepLookupEntity(variable);
 			
 		return varType;

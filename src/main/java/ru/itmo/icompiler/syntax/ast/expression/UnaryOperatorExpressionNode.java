@@ -7,6 +7,7 @@ import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
+import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class UnaryOperatorExpressionNode extends ExpressionASTNode {
@@ -50,6 +51,11 @@ public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 		exprNode.updateParentNode(this);
 	}
 	
+	@Override
+	public<R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg); 
+	}
+	
 	public String toString() {
 		return toString(0);
 	}
@@ -79,12 +85,12 @@ public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 	}
 	
 	@Override
-	public VarType inferType(SemanticContext ctx) throws SemanticException {
+	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
 		switch (unopType) {
 			case NOT_BINOP:
 				return VarType.BOOLEAN_PRIMITIVE_TYPE;
 			default:
-				return value.inferType(ctx);
+				return value.doTypeInference(ctx);
 		}
 	}
 

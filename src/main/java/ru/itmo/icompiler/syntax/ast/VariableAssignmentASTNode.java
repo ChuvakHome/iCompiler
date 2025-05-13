@@ -13,19 +13,30 @@ public class VariableAssignmentASTNode extends ASTNode {
 		super(parentNode, ASTNodeType.VAR_ASSIGN_NODE);
 		
 		this.lvalue = lvalue;
+		addChild(lvalue);
+		
 		this.valueNode = valueNode;
+		valueNode.setParentNode(this);
 	}
 	
 	public VariableAssignmentASTNode(ASTNode parentNode, Token token, ExpressionASTNode valueNode) {
 		this(parentNode, new VariableExpressionNode(null, token), valueNode);
 	}
 	
-	public ExpressionASTNode getValueNode() {
-		return this.valueNode;
+	public void setLeftSide(ExpressionASTNode leftValue) {
+		lvalue = leftValue;
 	}
 	
 	public ExpressionASTNode getLeftSide() {
 		return lvalue;
+	}
+	
+	public void setValueNode(ExpressionASTNode valueNode) {
+		this.valueNode = valueNode;
+	}
+	
+	public ExpressionASTNode getValueNode() {
+		return this.valueNode;
 	}
 	
 	public String toString(int tabs) {

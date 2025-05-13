@@ -14,7 +14,7 @@ public abstract class LoopStatementASTNode extends ASTNode {
 		bodyNode.addChild(statement);
 	}
 	
-	public ASTNode getBody() {
+	public CompoundStatementASTNode getBody() {
 		return bodyNode;
 	}
 }

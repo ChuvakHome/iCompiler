@@ -16,6 +16,10 @@ public class WhileStatementASTNode extends LoopStatementASTNode {
 		addChild(conditionExprNode);
 	}
 	
+	public void setConditionExpression(ExpressionASTNode conditionExpr) {
+		this.conditionExprNode = conditionExpr;
+	}
+	
 	public WhileStatementASTNode(ASTNode parentNode, ExpressionASTNode condition) {
 		this(parentNode, condition, new CompoundStatementASTNode(null));
 	}

@@ -2,9 +2,9 @@ package ru.itmo.icompiler.semantic;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeSet;
 
 import ru.itmo.icompiler.semantic.VarType.CompoundType;
@@ -24,10 +24,6 @@ public class RecordType extends CompoundType {
 		
 		public RecordProperty(VarType type, String name) {
 			this(type, name, null);
-		}
-		
-		private RecordProperty(Entry<String, VarType> entry) {
-			this(entry.getValue(), entry.getKey());
 		}
 		
 		public boolean equals(Object o) {
@@ -54,7 +50,7 @@ public class RecordType extends CompoundType {
 					)
 				));
 		
-		this.properties = new HashMap<>();
+		this.properties = new LinkedHashMap<>();
 		
 		for (RecordProperty prop: properties)
 			this.properties.put(prop.name, prop);
@@ -107,26 +103,26 @@ public class RecordType extends CompoundType {
 	}
 	
 	@Override
-	public boolean isConformingType(VarType type) {
+	public boolean isConvertibleTo(VarType type) {
 		if (type.getTag() != VarType.Tag.RECORD)
 			return false;
 		
 		RecordType recordType = (RecordType) type;
 		
-		for (Entry<String, RecordProperty> propEntry: recordType.properties.entrySet()) {
-			String propName = propEntry.getKey();
-			
-			if (hasProperty(propName)) {
-				RecordProperty otherProp = propEntry.getValue();
-				VarType propType = getPropertyType(propName);
-				
-				if (!propType.isConformingType(otherProp.type))
-					return false;
-			}
-			else
-				return false;
-		}
+//		for (Entry<String, RecordProperty> propEntry: recordType.properties.entrySet()) {
+//			String propName = propEntry.getKey();
+//			
+//			if (hasProperty(propName)) {
+//				RecordProperty otherProp = propEntry.getValue();
+//				VarType propType = getPropertyType(propName);
+//				
+//				if (!propType.isConformingType(otherProp.type))
+//					return false;
+//			}
+//			else
+//				return false;
+//		}
 		
-		return true;
+		return equalsType(recordType);
 	}
 }

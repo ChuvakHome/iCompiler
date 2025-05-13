@@ -2,6 +2,8 @@ package ru.itmo.icompiler.semantic.visitor;
 
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BooleanValueExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.EmptyExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.ImplicitCastExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.IntegerValueExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.PropertyAccessExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.RealValueExpressionNode;
@@ -23,4 +25,8 @@ public interface ExpressionNodeVisitor<R, A> {
 	R visit(BinaryOperatorExpressionNode node, A arg);
 	
 	R visit(PropertyAccessExpressionNode node, A arg);
+	
+	R visit(ImplicitCastExpressionNode node, A arg);
+	
+	R visit(EmptyExpressionNode node, A arg);
 }

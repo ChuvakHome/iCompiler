@@ -9,6 +9,7 @@ import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
+import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class BinaryOperatorExpressionNode extends ExpressionASTNode {
@@ -82,6 +83,11 @@ public class BinaryOperatorExpressionNode extends ExpressionASTNode {
 		return toString(0);
 	}
 	
+	@Override
+	public<R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg); 
+	}
+	
 	public String toString(int tabs) {
 		String sep = "\n" + " ".repeat((tabs + 1) * 4);
 		
@@ -142,8 +148,8 @@ public class BinaryOperatorExpressionNode extends ExpressionASTNode {
 	}
 	
 	private VarType inferTypeForArithmeticBinop(SemanticContext ctx) throws SemanticException {
-		VarType leftType = leftChild.inferType(ctx);
-		VarType rightType = rightChild.inferType(ctx);
+		VarType leftType = leftChild.doTypeInference(ctx);
+		VarType rightType = rightChild.doTypeInference(ctx);
 		
 		if (leftType.equals(VarType.REAL_PRIMITIVE_TYPE) || rightType.equals(VarType.REAL_PRIMITIVE_TYPE))
 			return VarType.REAL_PRIMITIVE_TYPE;
@@ -152,7 +158,7 @@ public class BinaryOperatorExpressionNode extends ExpressionASTNode {
 	}
 
 	@Override
-	public VarType inferType(SemanticContext ctx) throws SemanticException {
+	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
 		switch (binopType) {
 			case XOR_BINOP:
 			case OR_BINOP:

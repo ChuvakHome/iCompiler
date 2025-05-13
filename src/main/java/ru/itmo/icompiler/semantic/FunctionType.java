@@ -100,7 +100,7 @@ public class FunctionType extends CompoundType {
 	}
 	
 	@Override
-	public boolean isConformingType(VarType type) {
+	public boolean isConvertibleTo(VarType type) {
 		return false;
 	}
 }

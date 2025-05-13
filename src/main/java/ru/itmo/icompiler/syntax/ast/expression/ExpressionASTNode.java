@@ -8,11 +8,13 @@ import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.semantic.exception.UnexpectedTypeSemanticException;
 import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
+import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public abstract class ExpressionASTNode extends ASTNode {
 	private Token startToken;
 	private ExpressionNodeType exprNodeType;
+	private VarType exprType;
 	
 	public ExpressionASTNode(ASTNode parentNode, Token startToken, ExpressionNodeType exprNodeType) {
 		super(parentNode, ASTNodeType.EXPRESSION_NODE);
@@ -32,6 +34,14 @@ public abstract class ExpressionASTNode extends ASTNode {
 		super.setParentNode(node);
 	}
 	
+	protected void setExpressionType(VarType exprType) {
+		this.exprType = exprType;
+	}
+	
+	public VarType getExpressionType() {
+		return this.exprType;
+	}
+	
 	public String toString() {
 		return String.format("%s[exprType = %s]",
 					getNodeType(),
@@ -42,7 +52,7 @@ public abstract class ExpressionASTNode extends ASTNode {
 	public void checkType(SemanticContext ctx, VarType... expectedTypes) throws SemanticException {
 		VarType actualType = inferType(ctx); 
 		
-		if (Arrays.stream(expectedTypes).noneMatch(actualType::isConformingType))
+		if (Arrays.stream(expectedTypes).noneMatch(actualType::isConvertibleTo))
 			throw new UnexpectedTypeSemanticException(
 					Arrays.asList(expectedTypes), 
 					actualType, 
@@ -51,13 +61,24 @@ public abstract class ExpressionASTNode extends ASTNode {
 				);
 	}
 	
-	public abstract VarType inferType(SemanticContext ctx) throws SemanticException;
+	protected abstract VarType doTypeInference(SemanticContext ctx) throws SemanticException;
+	
+	public VarType inferType(SemanticContext ctx) throws SemanticException {
+		if (exprType == null)
+			exprType = doTypeInference(ctx);
+		
+		return exprType;
+	}
 	
 	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
 		return visitor.visit(this, arg);
 	}
 	
+	public abstract<R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg);
+	
 	public static enum ExpressionNodeType {
+		IMPLICIT_CAST_EXPR_NODE,
+		
 		BOOLEAN_VALUE_EXPR_NODE,
 		INTEGER_VALUE_EXPR_NODE,
 		REAL_VALUE_EXPR_NODE,
@@ -68,5 +89,7 @@ public abstract class ExpressionASTNode extends ASTNode {
 		FUN_CALL_EXPR_NODE,
 		PROPERTY_ACCESS_EXPR_NODE,
 		RECORD_PROPERTY_NAME_EXPR_NODE,
+		
+		EMPTY_EXPR_NODE
 	}
 }

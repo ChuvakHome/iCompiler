@@ -22,12 +22,20 @@ public class ForInRangeStatementASTNode extends LoopStatementASTNode {
 		return iterVar;
 	}
 	
+	public void setFromExpression(ExpressionASTNode fromExpression) {
+		this.fromExpr = fromExpression;
+	}
+	
 	public ExpressionASTNode getFromExpression() {
 		return fromExpr;
 	}
 	
 	public ExpressionASTNode getToExpression() {
 		return toExpr;
+	}
+	
+	public void setToExpression(ExpressionASTNode toExpression) {
+		this.toExpr = toExpression;
 	}
 	
 	public boolean isReversed() {

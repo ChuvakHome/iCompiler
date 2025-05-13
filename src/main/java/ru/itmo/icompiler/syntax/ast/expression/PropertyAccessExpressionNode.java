@@ -11,6 +11,7 @@ import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.exception.IllegalPropertyAccessSemanticException;
 import ru.itmo.icompiler.semantic.exception.NoSuchPropertySemanticException;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
+import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
 public class PropertyAccessExpressionNode extends ExpressionASTNode {
@@ -39,6 +40,11 @@ public class PropertyAccessExpressionNode extends ExpressionASTNode {
 //				);
 //	}
 	
+	@Override
+	public<R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
+		return visitor.visit(this, arg); 
+	}
+	
 	public String toString(int tabs) {
 		String sep = "\n" + " ".repeat((tabs + 1) * 4);
 		
@@ -53,7 +59,7 @@ public class PropertyAccessExpressionNode extends ExpressionASTNode {
 	public void validate(SemanticContext ctx) throws CompilerException {
 		propertyHolder.validate(ctx);
 		
-		VarType type = propertyHolder.inferType(ctx);
+		VarType type = propertyHolder.doTypeInference(ctx);
 		
 		Token tk = getStartToken();
 		
@@ -62,15 +68,15 @@ public class PropertyAccessExpressionNode extends ExpressionASTNode {
 		if (type.getTag() == VarType.Tag.RECORD) {
 			RecordType recordType = (RecordType) type;
 			
-			if (recordType.getProperty(propertyName) == null)
+			if (!recordType.hasProperty(propertyName))
 				throw new NoSuchPropertySemanticException(recordType, propertyName, tk.lineNumber, tk.lineOffset);
 		} else if (type.getTag() != VarType.Tag.ARRAY || !"length".equals(propertyName))
 			throw e;
 	}
 
 	@Override
-	public VarType inferType(SemanticContext ctx) throws SemanticException {
-		VarType rawType = propertyHolder.inferType(ctx);
+	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
+		VarType rawType = propertyHolder.doTypeInference(ctx);
 		
 		if (rawType.getTag() == Tag.ARRAY && "length".equals(propertyName))
 			return VarType.INTEGER_PRIMITIVE_TYPE;

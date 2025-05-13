@@ -34,7 +34,7 @@ public class Typealias extends VarType {
 	}
 
 	@Override
-	public boolean isConformingType(VarType type) {
-		return realType != null ? realType.isConformingType(type) : false;
+	public boolean isConvertibleTo(VarType type) {
+		return realType != null ? realType.isConvertibleTo(type) : false;
 	}
 }
