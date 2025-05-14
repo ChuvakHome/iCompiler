@@ -22,6 +22,7 @@ import ru.itmo.icompiler.lex.LexUtils;
 import ru.itmo.icompiler.lex.Lexer;
 import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.SemanticContext.Scope;
+import ru.itmo.icompiler.semantic.visitor.CFGASTVisitor;
 import ru.itmo.icompiler.semantic.visitor.SimpleASTVisitor;
 import ru.itmo.icompiler.semantic.visitor.SimpleExpressionVisitor;
 import ru.itmo.icompiler.semantic.visitor.TypealiasResolverASTVisitor;
@@ -92,6 +93,9 @@ public class ICompiler {
 		parseResult.accept(vis, new SemanticContext(compilerErrors, globalScope));
 		
 		System.out.println("AFTER SEMANTIC RESOLVING:\n" + parseResult.toString(0));
+
+		CFGASTVisitor checker = new CFGASTVisitor(exprVisitor);
+		parseResult.accept(checker, new SemanticContext(compilerErrors, globalScope));
 	}
 	
 	public void emitCode() {
@@ -262,7 +266,7 @@ public class ICompiler {
 					+ "  end\n"
 					+ "end";
 			
-//			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/bad/experiment.ilang"));
+			// ICompiler compiler = new ICompiler(new File("src/test/resources/sem/bad/experiment.ilang"));
 			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/test.ilang"));
 			
 			ASTNode n = compiler.parseProgram();
