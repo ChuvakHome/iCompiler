@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.exception.DeadCodeSemanticException;
+import ru.itmo.icompiler.semantic.exception.NoReturnSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
@@ -43,8 +45,40 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
         node.getBody().accept(this, ctx);
 
-        System.out.println(cfg);
-        // System.out.println(node.getRoutineDeclaration().getResultType());
+        VarType result = node.getRoutineDeclaration().getResultType();
+        if (result != VarType.VOID_TYPE) {
+            HashMap<ASTNode, ArrayList<ASTNode>> reverseCfg = new HashMap<>();
+
+            for (Map.Entry<ASTNode, ArrayList<ASTNode>> en : cfg.entrySet()) {
+                ASTNode nodeTo = en.getKey();
+                ArrayList<ASTNode> val = en.getValue();
+
+                if (reverseCfg.get(nodeTo) == null) {
+                    reverseCfg.put(nodeTo, new ArrayList<>());
+                }
+
+                for (ASTNode nodeFrom : val) {
+                    ArrayList<ASTNode> list = reverseCfg.get(nodeFrom);
+                    if (list == null) {
+                        list = new ArrayList<>();
+                        reverseCfg.put(nodeFrom, list);
+                    }
+                    list.add(nodeTo);
+                }
+            }
+
+            for (Map.Entry<ASTNode, ArrayList<ASTNode>> en : reverseCfg.entrySet()) {
+                ASTNode nodeTo = en.getKey();
+                ArrayList<ASTNode> val = en.getValue();
+
+                if (val != null && !val.isEmpty()) {
+                    continue;
+                }
+
+                ctx.addCompilerError(new NoReturnSemanticException(node.getRoutineDeclaration().getToken().lineNumber, node.getRoutineDeclaration().getToken().lineOffset));
+                break;
+            }
+        }
 
         for (Map.Entry<ASTNode, ArrayList<ASTNode>> en : cfg.entrySet()) {
             ASTNode key = en.getKey();
