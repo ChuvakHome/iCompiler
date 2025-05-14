@@ -85,4 +85,9 @@ public class PropertyAccessExpressionNode extends ExpressionASTNode {
 		
 		return recordType.getPropertyType(propertyName);
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

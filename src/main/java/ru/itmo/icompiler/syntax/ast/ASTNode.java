@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ru.itmo.icompiler.exception.CompilerException;
+import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 
@@ -96,6 +97,16 @@ public abstract class ASTNode {
 	
 	public void validate(SemanticContext ctx) throws CompilerException {
 		
+	}
+
+	public abstract Token getToken();
+
+	public int getLineNumber() {
+		return getToken().lineNumber;
+	}
+
+	public int getLineOffset() {
+		return getToken().lineOffset;
 	}
 	
 //	public String toString(int tabs) {

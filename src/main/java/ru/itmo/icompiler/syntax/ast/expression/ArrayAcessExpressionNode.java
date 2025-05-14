@@ -65,4 +65,9 @@ public class ArrayAcessExpressionNode extends ExpressionASTNode {
 	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
 		return ((ArrayType) holder.doTypeInference(ctx)).getElementType();
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

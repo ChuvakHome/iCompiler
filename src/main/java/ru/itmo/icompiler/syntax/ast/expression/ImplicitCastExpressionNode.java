@@ -3,6 +3,7 @@ package ru.itmo.icompiler.syntax.ast.expression;
 import java.util.Locale;
 
 import ru.itmo.icompiler.exception.CompilerException;
+import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
@@ -59,4 +60,9 @@ public class ImplicitCastExpressionNode extends ExpressionASTNode {
 	public <R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
 		return visitor.visit(this, arg);
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

@@ -42,4 +42,9 @@ public class RealValueExpressionNode extends ExpressionASTNode {
 	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
 		return VarType.REAL_PRIMITIVE_TYPE;
 	}
+
+    @Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

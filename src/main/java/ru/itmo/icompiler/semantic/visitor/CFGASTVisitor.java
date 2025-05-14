@@ -37,8 +37,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(RoutineDefinitionASTNode node, SemanticContext ctx) {
-        System.out.println("visit(RoutineDefinitionASTNode)");
-
         cfg = new HashMap<>();
         parents = new ArrayList<>();
         parents.add(node.getRoutineDeclaration());
@@ -68,7 +66,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
             }
 
             for (Map.Entry<ASTNode, ArrayList<ASTNode>> en : reverseCfg.entrySet()) {
-                ASTNode nodeTo = en.getKey();
                 ArrayList<ASTNode> val = en.getValue();
 
                 if (val != null && !val.isEmpty()) {
@@ -88,8 +85,7 @@ public class CFGASTVisitor extends AbstractASTVisitor {
                 continue;
             }
 
-            // TODO: Add line number and offset
-            ctx.addCompilerError(new DeadCodeSemanticException(1, 1));
+            ctx.addCompilerError(new DeadCodeSemanticException(key.getLineNumber(), key.getLineOffset()));
         }
 
         cfg = null;
@@ -98,8 +94,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(IfThenElseStatementASTNode node, SemanticContext ctx) {
-        System.out.println("visit(IfThenElseStatementASTNode)");
-
         ASTNode condition = node.getConditionExpression();
         cfg.put(condition, parents);
 
@@ -126,8 +120,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(ForInRangeStatementASTNode node, SemanticContext ctx) {
-        System.out.println("visit(ForInRangeStatementASTNode)");
-
         ASTNode cycle = node;
         cfg.put(cycle, parents);
 
@@ -152,8 +144,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(ForEachStatementASTNode node, SemanticContext ctx) {
-        System.out.println("visit(ForEachStatementASTNode)");
-
         ASTNode cycle = node;
         cfg.put(cycle, parents);
 
@@ -178,8 +168,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(WhileStatementASTNode node, SemanticContext ctx) {
-        System.out.println("visit(WhileStatementASTNode)");
-
         ASTNode cycle = node;
         cfg.put(cycle, parents);
 
@@ -204,8 +192,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(BreakStatementASTNode node, SemanticContext ctx) {
-        System.out.println("visit(BreakStatementASTNode)");
-
         cfg.put(node, parents);
         breaks.add(node);
 
@@ -216,7 +202,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(VariableDeclarationASTNode node, SemanticContext ctx) {
-        System.out.println("visit(VariableDeclarationASTNode)");
         cfg.put(node, parents);
 
         parents = new ArrayList<>();
@@ -227,7 +212,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(VariableAssignmentASTNode node, SemanticContext ctx) {
-        System.out.println("visit(VariableAssignmentASTNode)");
         cfg.put(node, parents);
 
         parents = new ArrayList<>();
@@ -250,7 +234,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(ReturnStatementASTNode node, SemanticContext ctx) {
-        System.out.println("visit(ReturnStatementASTNode)");
         cfg.put(node, parents);
 
         parents = new ArrayList<>();
@@ -260,7 +243,6 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(PrintStatementASTNode node, SemanticContext ctx) {
-        System.out.println("visit(PrintStatementASTNode)");
         cfg.put(node, parents);
 
         parents = new ArrayList<>();

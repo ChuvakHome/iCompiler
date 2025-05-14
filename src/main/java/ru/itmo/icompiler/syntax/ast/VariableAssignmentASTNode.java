@@ -50,4 +50,9 @@ public class VariableAssignmentASTNode extends ASTNode {
 	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
 		return visitor.visit(this, arg);
 	}
+
+	@Override
+    public Token getToken() {
+        return lvalue.getToken();
+    }
 }

@@ -99,4 +99,9 @@ public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 		MINUS_BINOP,
 		NOT_BINOP,
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

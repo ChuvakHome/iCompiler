@@ -201,4 +201,9 @@ public class BinaryOperatorExpressionNode extends ExpressionASTNode {
 			this.priority = priority;
 		}
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }
