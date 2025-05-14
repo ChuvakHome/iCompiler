@@ -46,4 +46,9 @@ public class VariableExpressionNode extends ExpressionASTNode {
 			
 		return varType;
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

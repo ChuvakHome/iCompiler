@@ -1,5 +1,6 @@
 package ru.itmo.icompiler.syntax.ast;
 
+import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
@@ -30,4 +31,9 @@ public class ReturnStatementASTNode extends ASTNode {
 	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
 		return visitor.visit(this, arg);
 	}
+
+	@Override
+    public Token getToken() {
+        return resultNode.getToken();
+    }
 }

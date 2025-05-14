@@ -21,4 +21,9 @@ public class EmptyExpressionNode extends ExpressionASTNode {
 	public <R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
 		return visitor.visit(this, arg);
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

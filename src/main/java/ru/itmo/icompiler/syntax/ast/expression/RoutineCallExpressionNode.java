@@ -146,4 +146,9 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 		
 		return varType.getReturnType();
 	}
+
+	@Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }

@@ -1,6 +1,7 @@
 package ru.itmo.icompiler.syntax.ast;
 
 import ru.itmo.icompiler.exception.CompilerException;
+import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
@@ -48,4 +49,9 @@ public class WhileStatementASTNode extends LoopStatementASTNode {
 	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
 		return visitor.visit(this, arg);
 	}
+
+	@Override
+    public Token getToken() {
+        return conditionExprNode.getToken();
+    }
 }

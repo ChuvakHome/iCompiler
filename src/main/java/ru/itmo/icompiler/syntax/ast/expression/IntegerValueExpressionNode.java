@@ -39,4 +39,9 @@ public class IntegerValueExpressionNode extends ExpressionASTNode {
 	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
 		return VarType.INTEGER_PRIMITIVE_TYPE;
 	}
+
+    @Override
+    public Token getToken() {
+        return getStartToken();
+    }
 }
