@@ -2,8 +2,10 @@ package ru.itmo.icompiler.semantic.visitor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.exception.DeadCodeSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
@@ -44,6 +46,18 @@ public class CFGASTVisitor extends AbstractASTVisitor {
         System.out.println(cfg);
         // System.out.println(node.getRoutineDeclaration().getResultType());
 
+        for (Map.Entry<ASTNode, ArrayList<ASTNode>> en : cfg.entrySet()) {
+            ASTNode key = en.getKey();
+            ArrayList<ASTNode> val = en.getValue();
+
+            if (val != null && !val.isEmpty()) {
+                continue;
+            }
+
+            // TODO: Add line number and offset
+            ctx.addCompilerError(new DeadCodeSemanticException(1, 1));
+        }
+
         cfg = null;
         return ctx;
     }
@@ -61,7 +75,7 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
         ASTNode elseBranch = node.getElseBranch();
 
-        if(elseBranch != null) {
+        if (elseBranch != null) {
             ArrayList<ASTNode> newParents = parents;
 
             parents = new ArrayList<>();
