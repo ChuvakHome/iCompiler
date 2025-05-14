@@ -99,9 +99,9 @@ public class JVMBytecodeMethod extends JVMBytecodeEntity {
 				String.join(
 					"\n", 
 					instructions.stream()
-						.map(JVMBytecodeEntity::toString)
+						.map(instr -> ((JVMBytecodeInstruction) instr).toString(4))
 						.toList()
-				).indent(4)
+				)
 			);
 	}
 	

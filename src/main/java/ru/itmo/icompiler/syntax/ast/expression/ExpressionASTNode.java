@@ -26,16 +26,16 @@ public abstract class ExpressionASTNode extends ASTNode {
 		return startToken;
 	}
 	
+	public void setExpressionType(VarType exprType) {
+		this.exprType = exprType;
+	}
+	
 	public ExpressionNodeType getExpressionNodeType() {		
 		return exprNodeType;
 	}
 	
 	protected void updateParentNode(ASTNode node) {
 		super.setParentNode(node);
-	}
-	
-	protected void setExpressionType(VarType exprType) {
-		this.exprType = exprType;
 	}
 	
 	public VarType getExpressionType() {

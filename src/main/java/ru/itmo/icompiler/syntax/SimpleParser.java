@@ -32,7 +32,7 @@ import ru.itmo.icompiler.syntax.ast.TypeDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableAssignmentASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
-import ru.itmo.icompiler.syntax.ast.expression.ArrayAcessExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.ArrayAccessExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode.BinaryOperatorType;
 import ru.itmo.icompiler.syntax.ast.expression.BooleanValueExpressionNode;
@@ -654,7 +654,7 @@ public class SimpleParser implements Parser {
 					case LEFT_BRACKET:
 						ExpressionASTNode indexExpr = parseExpression();
 						skipToken(TokenType.RIGHT_BRACKET);
-						lvalueExpr = new ArrayAcessExpressionNode(null, tk, lvalueExpr, indexExpr);
+						lvalueExpr = new ArrayAccessExpressionNode(null, tk, lvalueExpr, indexExpr);
 						break;
 					default:
 						break;
@@ -782,7 +782,7 @@ public class SimpleParser implements Parser {
 								
 								skipToken(TokenType.RIGHT_BRACKET);
 								
-								newExprNode = new ArrayAcessExpressionNode(
+								newExprNode = new ArrayAccessExpressionNode(
 											null,
 											tok,
 											operand,

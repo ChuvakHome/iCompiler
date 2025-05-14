@@ -40,6 +40,8 @@ public class VariableExpressionNode extends ExpressionASTNode {
 	
 	@Override
 	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
+		System.out.println("DEBUG VAR_EXPR: " + variable + ", " + ctx.getScope());
+		
 		VarType varType = ctx.getScope().deepLookupEntity(variable);
 			
 		return varType;

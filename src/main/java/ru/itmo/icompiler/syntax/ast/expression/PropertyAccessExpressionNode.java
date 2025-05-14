@@ -59,7 +59,7 @@ public class PropertyAccessExpressionNode extends ExpressionASTNode {
 	public void validate(SemanticContext ctx) throws CompilerException {
 		propertyHolder.validate(ctx);
 		
-		VarType type = propertyHolder.doTypeInference(ctx);
+		VarType type = propertyHolder.inferType(ctx);
 		
 		Token tk = getStartToken();
 		
@@ -76,7 +76,7 @@ public class PropertyAccessExpressionNode extends ExpressionASTNode {
 
 	@Override
 	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
-		VarType rawType = propertyHolder.doTypeInference(ctx);
+		VarType rawType = propertyHolder.inferType(ctx);
 		
 		if (rawType.getTag() == Tag.ARRAY && "length".equals(propertyName))
 			return VarType.INTEGER_PRIMITIVE_TYPE;

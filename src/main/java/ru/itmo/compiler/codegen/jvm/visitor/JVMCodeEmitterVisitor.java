@@ -16,9 +16,14 @@ import ru.itmo.compiler.codegen.jvm.JVMBytecodeClass;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeField;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction;
+import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeInstructionLabeled;
+import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeLabel;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils;
+import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
 import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
+import ru.itmo.icompiler.lex.Token;
+import ru.itmo.icompiler.lex.Token.TokenType;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.FunctionType;
 import ru.itmo.icompiler.semantic.VarType;
@@ -38,7 +43,10 @@ import ru.itmo.icompiler.syntax.ast.TypeDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableAssignmentASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode.BinaryOperatorType;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
+import ru.itmo.icompiler.syntax.ast.expression.IntegerValueExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.VariableExpressionNode;
 
 public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>, ExpressionVisitorContext> {
@@ -80,6 +88,10 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			indices.put(varName, index);
 		}
 		
+		public boolean containsLocalVarIndex(String varName) {
+			return indices.containsKey(varName) || parentContext != null && parentContext.containsLocalVarIndex(varName);
+		}
+		
 		public int getLocalVarIndex(String varName) {
 			Integer index = indices.get(varName);
 			
@@ -90,36 +102,77 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		}
 	}
 	
+	public static class IntCounter {
+		private int counter;
+		
+		public IntCounter(int counter) {
+			this.counter = counter;
+		}
+		
+		public IntCounter() {
+			this(0);
+		}
+		
+		public void setCounter(int counter) {
+			this.counter = counter;
+		}
+		
+		public void incCounter() {
+			++counter;
+		}
+		
+		public void incCounter(int delta) {
+			counter += delta;
+		}
+		
+		public int getCounter() {
+			return counter;
+		}
+		
+		public String toString() {
+			return String.valueOf(counter);
+		}
+	}
+	
 	public static class ExpressionVisitorContext {
 		private LocalVariableContext localVarCtx;
 		
-		private int labelCounter;
+		private IntCounter labelCounter;
 		
 		private String thenLabel; // short-circuit eval
 		private String elseLabel; // short-circuit eval
 		
-		public ExpressionVisitorContext(LocalVariableContext localVarCtx, int labelCounter, String thenLabel, String elseLabel) {
+		private String loopStartLabel; 
+		private String loopEndLabel; 
+		
+		public ExpressionVisitorContext(
+					LocalVariableContext localVarCtx, 
+					IntCounter labelCounter, 
+					String thenLabel, 
+					String elseLabel,
+					String loopStartLabel,
+					String loopEndLabel
+				) {
 			this.localVarCtx = localVarCtx;
 			this.labelCounter = labelCounter;
 			
 			this.thenLabel = thenLabel;
 			this.elseLabel = elseLabel;
+			
+			this.loopStartLabel = loopStartLabel;
+			this.loopEndLabel = loopEndLabel;
 		}
 		
 		public ExpressionVisitorContext() {
-			this(new LocalVariableContext(), 0, null, null);
+			this(new LocalVariableContext(), new IntCounter(), null, null, null, null);
 		}
 		
 		public LocalVariableContext getLocalVariableContext() {
 			return localVarCtx;
 		}
 		
-		public int getLabelCounter() {
+		public IntCounter getLabelCounter() {
 			return labelCounter;
-		}
-		
-		public void incLabelCounter(int delta) {
-			labelCounter += delta;
 		}
 		
 		public String getThenLabel() {
@@ -129,8 +182,17 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		public String getElseLabel() {
 			return elseLabel;
 		}
+		
+		public BranchContext toBranchContext() {
+			return toBranchContext(thenLabel, elseLabel);
+		}
+		
+		public BranchContext toBranchContext(String thenLabel, String elseLabel) {
+			return new BranchContext(thenLabel, elseLabel, localVarCtx, labelCounter);
+		}
 	}
 	
+	private int freshVariableCount = 0;
 	private int maxLocalVarNumber = 0;
 	
 	private Map<String, VarType> globalVarTypes;
@@ -168,6 +230,10 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		}
 	}
 		
+	private String newFreshVariable() {
+		return "FV#" + freshVariableCount++;
+	}
+	
 	private JVMBytecodeField processGlobalVarDecl(VariableDeclarationASTNode node) {
 		String varName = node.getVarName();
 		VarType varType = node.getVarType();
@@ -227,7 +293,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		contextStack.add(topCtx.clone());
 		
 		LocalVariableContext subctx = new LocalVariableContext(ctx.localVarCtx);
-		ExpressionVisitorContext subexprctx = new ExpressionVisitorContext(subctx, ctx.labelCounter, ctx.thenLabel, ctx.elseLabel);
+		ExpressionVisitorContext subexprctx = new ExpressionVisitorContext(subctx, ctx.labelCounter, ctx.thenLabel, ctx.elseLabel, ctx.loopStartLabel, ctx.loopEndLabel);
 		
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		
@@ -266,19 +332,37 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		ExpressionASTNode valueNode = node.getValueNode();
 		
-		List<JVMBytecodeEntity> valueCompInstrs = valueNode.accept(expressionVisitor, ctx);
+		List<JVMBytecodeEntity> valueCompInstrs = valueNode.accept(expressionVisitor, ctx.toBranchContext());
 		assignInsrs.addAll(valueCompInstrs);
 		
 		switch (leftSideNode.getExpressionNodeType()) {
 			case VARIABLE_EXPR_NODE: {
 				VariableExpressionNode varExprNode = (VariableExpressionNode) leftSideNode;
 				
-				assignInsrs.add(
-					new JVMBytecodeInstruction(
-							JVMBytecodeUtils.getOpcodePrefix(requiredType) + "store", 
-							ctx.localVarCtx.getLocalVarIndex(varExprNode.getVariable())
-					)
-				);
+				String assignVarName = varExprNode.getVariable();
+				
+				if (ctx.localVarCtx.containsLocalVarIndex(assignVarName)) {
+					int lvIndex = ctx.localVarCtx.getLocalVarIndex(assignVarName);
+					
+					assignInsrs.add(
+						lvIndex <= 3 
+						? new JVMBytecodeInstruction(
+								JVMBytecodeUtils.getOpcodePrefix(requiredType) + "store_" + lvIndex
+							)
+						: new JVMBytecodeInstruction(
+								JVMBytecodeUtils.getOpcodePrefix(requiredType) + "store", 
+								lvIndex
+							)
+					);
+				} else {
+					assignInsrs.add(
+						new JVMBytecodeInstruction(
+							"putstatic", 
+							PROGRAM_CLASS_NAME + "/" + assignVarName, 
+							JVMBytecodeUtils.getTypeDescriptor(requiredType)
+						)
+					);
+				}
 				
 				break;
 			}
@@ -311,14 +395,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		int argnum = 0;
 		
 		LocalVariableContext routineLVCtx = new LocalVariableContext(ctx.localVarCtx);
-		ExpressionVisitorContext routineExprCtx = new ExpressionVisitorContext(routineLVCtx, 0, null, null);
+		ExpressionVisitorContext routineExprCtx = new ExpressionVisitorContext(routineLVCtx, new IntCounter(), null, null, null, null);
 		
 		for (VariableDeclarationASTNode argDecl: routineHeader.getArgumentsDeclarations()) {
 			String argName = argDecl.getVarName();
 			VarType argType = argDecl.getVarType();
 			
-			Stack<Integer> indicesStack = new Stack<>();
-			indicesStack.add(argnum++);
 			routineLVCtx.addLocalVariable(argName, argnum++);
 			
 			String jvmTypeDescriptor = JVMCodeEmitterVisitor.getJVMTypeDescriptor(argType);
@@ -336,7 +418,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		List<JVMBytecodeEntity> routineInstructions = node.getBody().accept(this, routineExprCtx);
 		
-		if (routineHeader.getResultType() == VarType.VOID_TYPE)
+//		if (routineHeader.getResultType() == VarType.VOID_TYPE)
 			routineInstructions.add(new JVMBytecodeInstruction("return"));
 		
 		return Arrays.asList(
@@ -363,7 +445,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		List<JVMBytecodeEntity> instructions = new ArrayList<>(); 
 		instructions.addAll(
-			returnValueExprNode.accept(expressionVisitor, ctx)
+			returnValueExprNode.accept(expressionVisitor, ctx.toBranchContext())
 		);
 		instructions.add(
 			new JVMBytecodeInstruction(
@@ -376,27 +458,149 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(IfThenElseStatementASTNode node, ExpressionVisitorContext ctx) {
-		return Collections.emptyList();
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		
+		String thenLabel = "L" + ctx.getLabelCounter().getCounter();
+		ctx.getLabelCounter().incCounter();
+		
+		String elseLabel = null;
+		
+		ASTNode elseBranch = node.getElseBranch(); 
+		
+		if (elseBranch != null) {
+			elseLabel = "L" + ctx.getLabelCounter().getCounter();
+			ctx.getLabelCounter().incCounter();
+		}
+		
+		String endLabel = "L" + ctx.getLabelCounter().getCounter();
+		ctx.getLabelCounter().incCounter();
+		
+		if (elseLabel == null)
+			elseLabel = endLabel;
+		
+		instructions.addAll(
+			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(thenLabel, elseLabel))
+		);
+		
+		instructions.add(new JVMBytecodeInstruction("ifeq", elseLabel));
+		instructions.add(new JVMBytecodeLabel(thenLabel));
+		instructions.addAll(
+			node.getTrueBranch().accept(this, ctx)
+		);
+		
+		if (elseBranch != null) {
+			instructions.addAll(
+				Arrays.asList(
+					new JVMBytecodeInstruction("goto", endLabel),
+					new JVMBytecodeLabel(elseLabel)
+				)
+			);
+			instructions.addAll(
+				elseBranch.accept(this, ctx)
+			);
+		}
+		
+		instructions.add(new JVMBytecodeLabel(endLabel));
+		
+		return instructions;
 	}
 
 	@Override
 	public List<JVMBytecodeEntity> visit(ForInRangeStatementASTNode node, ExpressionVisitorContext ctx) {
-		return null;
+		CompoundStatementASTNode scopedStmt = new CompoundStatementASTNode(null);
+		
+		VariableExpressionNode counterVarExpr = new VariableExpressionNode(null, new Token(-1, -1, TokenType.IDENTIFIER, node.getIterVariable()));
+		counterVarExpr.setExpressionType(VarType.INTEGER_PRIMITIVE_TYPE);
+		
+		VariableDeclarationASTNode counterVarDecl = new VariableDeclarationASTNode(null, VarType.INTEGER_PRIMITIVE_TYPE, null, node.getIterVariable());
+		counterVarDecl.addChild(
+			new VariableAssignmentASTNode(null, 
+				counterVarExpr, 
+				node.isReversed() ? node.getToExpression() : node.getFromExpression()
+			)
+		);
+		scopedStmt.addChild(counterVarDecl);
+		
+		ExpressionASTNode conditionExpr;
+		
+		if (node.isReversed()) {
+			conditionExpr = new BinaryOperatorExpressionNode(null, null, BinaryOperatorType.GE_BINOP, counterVarExpr, node.getFromExpression()); 
+		} else {
+			conditionExpr = new BinaryOperatorExpressionNode(null, null, BinaryOperatorType.LE_BINOP, counterVarExpr, node.getToExpression());
+		}
+			
+		conditionExpr.setExpressionType(VarType.BOOLEAN_PRIMITIVE_TYPE);
+		
+		ExpressionASTNode mutExpr = new BinaryOperatorExpressionNode(null, null, node.isReversed() ? BinaryOperatorType.SUB_BINOP : BinaryOperatorType.ADD_BINOP, counterVarExpr, new IntegerValueExpressionNode(null, null, 1));
+		mutExpr.setExpressionType(VarType.INTEGER_PRIMITIVE_TYPE);
+		
+		WhileStatementASTNode whileStmt = new WhileStatementASTNode(null, conditionExpr, node.getBody());
+		whileStmt.addBodyStatement(
+			new VariableAssignmentASTNode(null,
+				counterVarExpr,
+				mutExpr
+			)
+		);
+		
+		scopedStmt.addChild(whileStmt);
+		
+		return scopedStmt.accept(this, ctx);
 	}
 
 	@Override
-	public List<JVMBytecodeEntity> visit(ForEachStatementASTNode node, ExpressionVisitorContext ctx) {
+	public List<JVMBytecodeEntity> visit(ForEachStatementASTNode node, ExpressionVisitorContext ctx) {		
 		return null;
 	}
 
 	@Override
 	public List<JVMBytecodeEntity> visit(WhileStatementASTNode node, ExpressionVisitorContext ctx) {
-		return null;
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		
+		String loopStartLabel = "L" + ctx.getLabelCounter().getCounter();
+		ctx.getLabelCounter().incCounter();
+		
+		instructions.add(new JVMBytecodeLabel(loopStartLabel));
+		
+		String loopBodyLabel = "L" + ctx.getLabelCounter().getCounter();
+		ctx.getLabelCounter().incCounter();
+		
+		String loopEndLabel = "L" + ctx.getLabelCounter().getCounter();
+		ctx.getLabelCounter().incCounter();
+		
+		instructions.addAll(
+			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(loopBodyLabel, loopEndLabel))
+		);
+		instructions.addAll(
+			Arrays.asList(
+				new JVMBytecodeInstruction("ifeq", loopEndLabel),
+				new JVMBytecodeLabel(loopBodyLabel)
+			)
+		);
+		instructions.addAll(
+			node.getBody().accept(this, new ExpressionVisitorContext(
+											ctx.localVarCtx,
+											ctx.labelCounter,
+											null,
+											null,
+											loopStartLabel,
+											loopEndLabel
+										))
+		);
+		instructions.addAll(
+			Arrays.asList(
+				new JVMBytecodeInstruction("goto", loopStartLabel),
+				new JVMBytecodeLabel(loopEndLabel)
+			)
+		);
+		
+		return instructions;
 	}
 
 	@Override
 	public List<JVMBytecodeEntity> visit(BreakStatementASTNode node, ExpressionVisitorContext ctx) {
-		return null;
+		return Arrays.asList(
+					new JVMBytecodeInstruction("goto", ctx.loopEndLabel)
+				);
 	}
 
 	@Override
@@ -422,7 +626,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			
 			ExpressionASTNode arg = (ExpressionASTNode) child;
 			
-			List<JVMBytecodeEntity> computeArgInstructions = arg.accept(expressionVisitor, ctx);
+			List<JVMBytecodeEntity> computeArgInstructions = arg.accept(expressionVisitor, ctx.toBranchContext());
 			
 			VarType argType = arg.getExpressionType();
 			
@@ -447,6 +651,52 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(ExpressionASTNode node, ExpressionVisitorContext ctx) {
-		return node.accept(expressionVisitor, ctx);
+//		System.out.println("DEBUG: " + node.toString(0));
+		
+		if (node.getExpressionType() == VarType.BOOLEAN_PRIMITIVE_TYPE) {
+			List<JVMBytecodeEntity> instructions = new ArrayList<>();
+			
+			String thenLabel = ctx.thenLabel;
+			
+			if (thenLabel == null) {
+				thenLabel = "L" + ctx.labelCounter;
+				ctx.labelCounter.incCounter();
+			}
+			
+			String elseLabel = ctx.elseLabel;
+			
+			if (elseLabel == null) {
+				elseLabel = "L" + ctx.labelCounter;
+				ctx.labelCounter.incCounter();
+			}
+			
+			instructions.addAll(
+				node.accept(expressionVisitor, ctx.toBranchContext(thenLabel, elseLabel))
+			);
+			
+			String endLabel = "L" + ctx.labelCounter;
+			ctx.labelCounter.incCounter();
+			
+			if (ctx.thenLabel == null) {
+				instructions.addAll(
+					Arrays.asList(
+						new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1"),
+						new JVMBytecodeInstruction("goto", endLabel)
+					)
+				);
+			}
+			
+			if (ctx.elseLabel == null) {
+				instructions.addAll(
+					Arrays.asList(
+							new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0"),
+							new JVMBytecodeLabel(endLabel)
+						)
+				);
+			}
+			
+			return instructions;
+		} else
+			return node.accept(expressionVisitor, ctx.toBranchContext());
 	}
 }

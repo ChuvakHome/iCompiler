@@ -90,7 +90,7 @@ public class UnaryOperatorExpressionNode extends ExpressionASTNode {
 			case NOT_BINOP:
 				return VarType.BOOLEAN_PRIMITIVE_TYPE;
 			default:
-				return value.doTypeInference(ctx);
+				return value.inferType(ctx);
 		}
 	}
 

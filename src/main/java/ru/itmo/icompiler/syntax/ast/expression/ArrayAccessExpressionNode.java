@@ -12,11 +12,11 @@ import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 
-public class ArrayAcessExpressionNode extends ExpressionASTNode {
+public class ArrayAccessExpressionNode extends ExpressionASTNode {
 	private ExpressionASTNode holder;
 	private ExpressionASTNode index;
 	
-	public ArrayAcessExpressionNode(ASTNode parent, Token tok, ExpressionASTNode holder, ExpressionASTNode index) {
+	public ArrayAccessExpressionNode(ASTNode parent, Token tok, ExpressionASTNode holder, ExpressionASTNode index) {
 		super(parent, tok, ExpressionNodeType.ARRAY_ACCESS_EXPR_NODE);
 		
 		this.holder = holder;
@@ -36,7 +36,7 @@ public class ArrayAcessExpressionNode extends ExpressionASTNode {
 	}
 	
 	public<R, A> R accept(ExpressionNodeVisitor<R, A> visitor, A arg) {
-		return null;
+		return visitor.visit(this, arg);
 	}
 	
 	public String toString(int tabs) {
@@ -53,7 +53,7 @@ public class ArrayAcessExpressionNode extends ExpressionASTNode {
 	public void validate(SemanticContext ctx) throws CompilerException {
 		holder.validate(ctx);
 		
-		VarType holderType = holder.doTypeInference(ctx);
+		VarType holderType = holder.inferType(ctx);
 		if (holderType.getTag() != VarType.Tag.ARRAY)
 			throw new IllegalArrayAccessSemanticException(holderType, getStartToken().lineNumber, getStartToken().lineOffset);	
 		
@@ -63,6 +63,6 @@ public class ArrayAcessExpressionNode extends ExpressionASTNode {
 
 	@Override
 	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
-		return ((ArrayType) holder.doTypeInference(ctx)).getElementType();
+		return ((ArrayType) holder.inferType(ctx)).getElementType();
 	}
 }

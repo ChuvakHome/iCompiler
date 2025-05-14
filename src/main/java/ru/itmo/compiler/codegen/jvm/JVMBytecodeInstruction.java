@@ -16,12 +16,35 @@ public class JVMBytecodeInstruction extends JVMBytecodeEntity {
 		this.label = label;
 	}
 	
-	public String toString() {
+	public String toString(int ident) {
+		String labelStr = label != null && !label.isBlank() ? label + ":\n" : "";
+		
+		if (opcode == null)
+			return labelStr.strip();
+		
 		return String.format(
-				"%s%s %s", 
-				label != null && !label.isBlank() ? label + ": " : "", 
-				opcode, 
+				"%s%s %s",
+				labelStr,
+				" ".repeat(ident) + opcode,
 				String.join(" ", args)
 			);
+	}
+	
+	public String toString() {
+		return toString(0);
+	}
+	
+	public static class JVMBytecodeInstructionLabeled extends JVMBytecodeInstruction {
+		public JVMBytecodeInstructionLabeled(String label, String opcode, Object... args) {
+			super(opcode, args);
+			
+			setLabel(label);
+		}
+	}
+	
+	public static class JVMBytecodeLabel extends JVMBytecodeInstructionLabeled {
+		public JVMBytecodeLabel(String label) {
+			super(label, null);
+		}
 	}
 }

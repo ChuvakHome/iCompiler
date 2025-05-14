@@ -11,6 +11,7 @@ import ru.itmo.icompiler.semantic.FunctionType;
 import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.semantic.SemanticContext.Scope;
 import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.exception.EntityRedefinitionSemanticException;
 import ru.itmo.icompiler.semantic.exception.LoopStatementOutsideLoopSemanticException;
 import ru.itmo.icompiler.semantic.exception.NonAssignableLeftPartSemanticException;
@@ -33,6 +34,7 @@ import ru.itmo.icompiler.syntax.ast.VariableDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ImplicitCastExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.PropertyAccessExpressionNode;
 import ru.itmo.icompiler.syntax.exception.VariableDeclWithoutTypeSyntaxException;
 
 public class SimpleASTVisitor extends AbstractASTVisitor {
@@ -118,7 +120,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		}
 		
 		if (assignNode != null)
-			assignNode.getValueNode().accept(expressionVisitor, ctx);
+			assignNode.getValueNode().accept(this, ctx);
 		
 		node.setVarType(varType);
 		
@@ -126,13 +128,22 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 	}
 
 	private static void checkPrimaryAssignable(ExpressionASTNode expr) throws SemanticException {
+		SemanticException e = new NonAssignableLeftPartSemanticException(expr.getStartToken().lineNumber, expr.getStartToken().lineOffset);
+		
 		switch (expr.getExpressionNodeType()) {
-			case VARIABLE_EXPR_NODE:
 			case PROPERTY_ACCESS_EXPR_NODE:
+				PropertyAccessExpressionNode propAccExpr = (PropertyAccessExpressionNode) expr;
+				
+				ExpressionASTNode holder = propAccExpr.getPropertyHolder();
+				String propName = propAccExpr.getPropertyName();
+				
+				if (holder.getExpressionType().getTag() == Tag.ARRAY && "length".equals(propName))
+					throw e;
+			case VARIABLE_EXPR_NODE:
 			case ARRAY_ACCESS_EXPR_NODE:
 				break;
 			default:
-				new NonAssignableLeftPartSemanticException(expr.getStartToken().lineNumber, expr.getStartToken().lineOffset);
+				throw e;
 		}
 	}
 	
@@ -149,8 +160,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			VarType leftType = lhs.inferType(lhsCtx);
 
 			rhs.checkType(ctx, leftType);
-			
-			rhs.accept(expressionVisitor, ctx);
+			rhs.accept(this, ctx);
 			
 			if (!rhs.getExpressionType().equals(leftType))
 				node.setValueNode(new ImplicitCastExpressionNode(null, leftType, rhs));
@@ -242,11 +252,11 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			ExpressionASTNode resultNode = node.getResultNode(); 
 			
-			resultNode.accept(expressionVisitor, ctx);
 			resultNode.checkType(ctx, expectedReturnType);
+			resultNode.accept(this, ctx);
 			
 			if (!resultNode.getExpressionType().equals(expectedReturnType))
-				node.setResultNode(new ImplicitCastExpressionNode(null, expectedReturnType, resultNode));
+				node.setResultValue(new ImplicitCastExpressionNode(null, expectedReturnType, resultNode));
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
 		}
@@ -261,6 +271,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			ExpressionASTNode conditionExpr = node.getConditionExpression();
 			
+			conditionExpr.accept(this, ctx);
 			if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
 				node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
 		} catch (CompilerException e) {
@@ -289,6 +300,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			fromExpr.validate(ctx);
 			fromExpr.checkType(ctx, VarType.INTEGER_PRIMITIVE_TYPE);
 			
+			fromExpr.accept(this, ctx);
 			if (!fromExpr.getExpressionType().equals(VarType.INTEGER_PRIMITIVE_TYPE))
 				node.setFromExpression(new ImplicitCastExpressionNode(null, VarType.INTEGER_PRIMITIVE_TYPE, fromExpr));
 		} catch (CompilerException e) {
@@ -299,6 +311,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			toExpr.validate(ctx);
 			toExpr.checkType(ctx, VarType.INTEGER_PRIMITIVE_TYPE);
 			
+			toExpr.accept(this, ctx);
 			if (!toExpr.getExpressionType().equals(VarType.INTEGER_PRIMITIVE_TYPE))
 				node.setToExpression(new ImplicitCastExpressionNode(null, VarType.INTEGER_PRIMITIVE_TYPE, toExpr));
 		} catch (CompilerException e) {
@@ -353,6 +366,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			ExpressionASTNode conditionExpr = node.getConditionExpression();
 			
+			conditionExpr.accept(this, ctx);
 			if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
 				node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
 		} catch (CompilerException e) {
@@ -388,13 +402,13 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 				
 				expr.validate(ctx);
 				
-				expr.accept(expressionVisitor, ctx);
 				expr.checkType(
 							ctx,
 							VarType.BOOLEAN_PRIMITIVE_TYPE,
 							VarType.INTEGER_PRIMITIVE_TYPE,
 							VarType.REAL_PRIMITIVE_TYPE
 						);
+				expr.accept(this, ctx);
 			} catch (CompilerException e) {
 				ctx.addCompilerError(e);
 			}

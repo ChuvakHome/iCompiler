@@ -12,7 +12,7 @@ public class ReturnStatementASTNode extends ASTNode {
 		this.resultNode = resultNode;
 	}
 	
-	public void setResultNode(ExpressionASTNode resultNode) {
+	public void setResultValue(ExpressionASTNode resultNode) {
 		this.resultNode = resultNode;
 	}
 	

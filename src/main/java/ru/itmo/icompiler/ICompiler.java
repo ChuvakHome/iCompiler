@@ -180,7 +180,7 @@ public class ICompiler {
 	
 	public static void main(String[] args) throws IOException {
 //		Lexer lexer = new DFALexer("x: integer, y, flag: boolean");
-//		
+		
 //		while (!lexer.isEndReached() && lexer.lookupToken().type != TokenType.COMMA_OPERATOR)
 //			lexer.skipToken();
 //		
@@ -264,6 +264,7 @@ public class ICompiler {
 			
 //			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/bad/experiment.ilang"));
 			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/test.ilang"));
+//			ICompiler compiler = new ICompiler(new File("src/test/resources/sem/good/prog14.ilang"));
 			
 			ASTNode n = compiler.parseProgram();
 			System.out.println(n.toString(0));

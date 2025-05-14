@@ -61,6 +61,14 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 		return routineName;
 	}
 	
+	public void setArguments(List<ExpressionASTNode> arguments) {
+		this.arguments = arguments;
+	}
+	
+	public void setArgument(int i, ExpressionASTNode argument) {
+		this.arguments.set(i, argument);
+	}
+	
 	public List<ExpressionASTNode> getArguments() {
 		return arguments;
 	}
@@ -105,12 +113,14 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 		
 		while (argsIter.hasNext() && iter.hasNext()) {
 			Entry<String, VarType> argEntry = argsIter.next();
+			VarType requiredArgType = argEntry.getValue();
 			
 			ExpressionASTNode argExpr = iter.next();
 			argExpr.validate(ctx);
 			
 			try {
-				argExpr.checkType(ctx, argEntry.getValue());
+				System.out.println("argExpr: " + argExpr.toString(0));
+				argExpr.checkType(ctx, requiredArgType);
 			} catch (CompilerException e) {
 				ctx.addCompilerError(e);
 			}

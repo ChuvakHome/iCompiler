@@ -148,8 +148,8 @@ public class BinaryOperatorExpressionNode extends ExpressionASTNode {
 	}
 	
 	private VarType inferTypeForArithmeticBinop(SemanticContext ctx) throws SemanticException {
-		VarType leftType = leftChild.doTypeInference(ctx);
-		VarType rightType = rightChild.doTypeInference(ctx);
+		VarType leftType = leftChild.inferType(ctx);
+		VarType rightType = rightChild.inferType(ctx);
 		
 		if (leftType.equals(VarType.REAL_PRIMITIVE_TYPE) || rightType.equals(VarType.REAL_PRIMITIVE_TYPE))
 			return VarType.REAL_PRIMITIVE_TYPE;
