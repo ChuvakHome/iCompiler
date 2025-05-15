@@ -195,11 +195,11 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 				arg.accept(this, ctx)
 			);
 			
-			sb.append(JVMBytecodeUtils.getTypeDescriptor(arg.getExpressionType()));
+			sb.append(JVMCodeEmitterVisitor.getJVMTypeDescriptor(arg.getExpressionType()));
 		});
 		
 		sb.append(')')
-			.append(JVMBytecodeUtils.getTypeDescriptor(routineType.getReturnType()));
+			.append(JVMCodeEmitterVisitor.getJVMTypeDescriptor(routineType.getReturnType()));
 		
 		instructions.add(
 			new JVMBytecodeInstruction("invokestatic", sb.toString())
