@@ -99,7 +99,12 @@ public class JVMBytecodeMethod extends JVMBytecodeEntity {
 				String.join(
 					"\n", 
 					instructions.stream()
-						.map(instr -> ((JVMBytecodeInstruction) instr).toString(4))
+						.map(instr -> {
+							if (instr instanceof JVMBytecodeInstruction jvmInstr)
+								return jvmInstr.toString(4);
+							
+							return instr.toString();
+						})
 						.toList()
 				)
 			);

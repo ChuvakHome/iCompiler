@@ -1,18 +1,13 @@
 package ru.itmo.compiler.codegen.jvm.utils;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeClass;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeField;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.RecordType;
 import ru.itmo.icompiler.semantic.VarType;
-import ru.itmo.icompiler.semantic.VarType.Tag;
 
 public final class JVMBytecodeUtils {
 	public static final Map<VarType, String> PRIMITIVE_TYPE_OPCODE_MAPPER = Map.ofEntries(
@@ -21,6 +16,14 @@ public final class JVMBytecodeUtils {
 			Map.entry(VarType.REAL_PRIMITIVE_TYPE, "f"),
 			
 			Map.entry(VarType.VOID_TYPE, "")
+		);
+	
+	public static final Map<VarType, String> PRIMITIVE_TYPENAME_MAPPER = Map.ofEntries(
+			Map.entry(VarType.BOOLEAN_PRIMITIVE_TYPE, "boolean"),
+			Map.entry(VarType.INTEGER_PRIMITIVE_TYPE, "int"),
+			Map.entry(VarType.REAL_PRIMITIVE_TYPE, "float"),
+			
+			Map.entry(VarType.VOID_TYPE, "void")
 		);
 	
 	public static final Map<VarType, String> PRIMITIVE_TYPE_DESCRIPTOR_MAPPER = Map.ofEntries(
@@ -47,6 +50,10 @@ public final class JVMBytecodeUtils {
 	
 	public static JVMBytecodeMethod.AccessSpec[] methodSpecs(JVMBytecodeMethod.AccessSpec... specs) {
 		return specs;
+	}
+	
+	public static String getTypename(VarType varType) {
+		return PRIMITIVE_TYPENAME_MAPPER.get(varType);
 	}
 	
 	public static String getTypeDescriptor(VarType varType) {

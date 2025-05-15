@@ -119,7 +119,6 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 			argExpr.validate(ctx);
 			
 			try {
-				System.out.println("argExpr: " + argExpr.toString(0));
 				argExpr.checkType(ctx, requiredArgType);
 			} catch (CompilerException e) {
 				ctx.addCompilerError(e);

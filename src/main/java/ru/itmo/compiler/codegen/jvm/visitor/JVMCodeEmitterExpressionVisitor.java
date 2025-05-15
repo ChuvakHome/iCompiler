@@ -14,8 +14,10 @@ import ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils;
 import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
 import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.IntCounter;
 import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.LocalVariableContext;
+import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.FunctionType;
 import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.expression.ArrayAccessExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
@@ -57,11 +59,11 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		}
 	}
 	
-	private static final Map<VarType, String> OPCODE_PREFIX_MAPPER = Map.ofEntries(
-		Map.entry(VarType.BOOLEAN_PRIMITIVE_TYPE, "i"),
-		Map.entry(VarType.INTEGER_PRIMITIVE_TYPE, "i"),
-		Map.entry(VarType.REAL_PRIMITIVE_TYPE, "f")
-	);
+//	private static final Map<VarType, String> OPCODE_PREFIX_MAPPER = Map.ofEntries(
+//		Map.entry(VarType.BOOLEAN_PRIMITIVE_TYPE, "i"),
+//		Map.entry(VarType.INTEGER_PRIMITIVE_TYPE, "i"),
+//		Map.entry(VarType.REAL_PRIMITIVE_TYPE, "f")
+//	);
 	
 	private static final Map<BinaryOperatorType, String> INTEGER_COMPARISON_OPCODE_MAPPER = Map.ofEntries(
 			Map.entry(BinaryOperatorType.LT_BINOP, "if_icmplt"),
@@ -108,16 +110,26 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 			Map.entry(BinaryOperatorType.GT_BINOP, BinaryOperatorType.LE_BINOP),
 			Map.entry(BinaryOperatorType.GE_BINOP, BinaryOperatorType.LT_BINOP)
 	);
-	
-	private static String getPrefixByType(VarType varType) {
-		String prefix = OPCODE_PREFIX_MAPPER.get(varType);
-		
-		if (prefix != null)
-			return prefix;
-		
-		return null;
-	}
 
+	public static JVMBytecodeEntity getLoadVariableInstr(String varName, VarType varType, LocalVariableContext localVariableContext) {
+		if (localVariableContext.containsLocalVarIndex(varName)) {
+			int lvIndex = localVariableContext.getLocalVarIndex(varName);
+			
+			final String opcode = JVMBytecodeUtils.getOpcodePrefix(varType) + "load";
+			
+			return lvIndex <= 3
+					? new JVMBytecodeInstruction(opcode + "_" + lvIndex)
+					: new JVMBytecodeInstruction(opcode, lvIndex)
+					;
+		} else {
+			return new JVMBytecodeInstruction(
+					"getstatic", 
+					JVMCodeEmitterVisitor.PROGRAM_CLASS_NAME + "/" + varName, 
+					JVMBytecodeUtils.getTypeDescriptor(varType)
+				);
+		}
+	}
+	
 	@Override
 	public List<JVMBytecodeEntity> visit(BooleanValueExpressionNode node, BranchContext ctx) {
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
@@ -157,29 +169,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		String varName = node.getVariable();
 		VarType varType = node.getExpressionType();
 		
-		List<JVMBytecodeEntity> instructions = new ArrayList<>();
-		JVMBytecodeInstruction loadInstr;
-		
-		if (ctx.localVariableContext.containsLocalVarIndex(varName)) {
-			final String opcode = getPrefixByType(varType) + "load";
-			
-			int lvIndex = ctx.localVariableContext.getLocalVarIndex(varName);
-			
-			loadInstr = 
-				lvIndex <= 3
-				? new JVMBytecodeInstruction(opcode + "_" + lvIndex)
-				: new JVMBytecodeInstruction(opcode, lvIndex)
-				;
-		} else
-			loadInstr = new JVMBytecodeInstruction(
-								"getstatic", 
-								JVMCodeEmitterVisitor.PROGRAM_CLASS_NAME + "/" + varName, 
-								JVMBytecodeUtils.getTypeDescriptor(varType)
-							);
-		
-		instructions.add(loadInstr);
-		
-		return instructions;
+		return Arrays.asList(getLoadVariableInstr(varName, varType, ctx.localVariableContext));
 	}
 
 	@Override
@@ -230,7 +220,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 				instructions.addAll(unopValue.accept(this, ctx));
 				
 				if (unopType == UnaryOperatorType.MINUS_BINOP)
-					instructions.add(new JVMBytecodeInstruction(getPrefixByType(unopValue.getExpressionType()) + "neg"));
+					instructions.add(new JVMBytecodeInstruction(JVMBytecodeUtils.getOpcodePrefix(unopValue.getExpressionType()) + "neg"));
 					
 				break;
 			case NOT_BINOP: {
@@ -380,14 +370,11 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 	
 	@Override
 	public List<JVMBytecodeEntity> visit(BinaryOperatorExpressionNode node, BranchContext ctx) {		
-		String instrPrefix = getPrefixByType(node.getExpressionType());
+		String instrPrefix = JVMBytecodeUtils.getOpcodePrefix(node.getExpressionType());
 		
 		BinaryOperatorType binop = node.getBinaryOperatorType();
 		
 		String opcode = BINOP_OPCODE_MAPPER.get(binop);
-		
-		if (binop == BinaryOperatorType.SUB_BINOP)
-			System.out.println(opcode + " " + node.toString(0));
 		
 //		if (binop == BinaryOperatorType.AND_BINOP || binop == BinaryOperatorType.OR_BINOP)
 //			return emitSCEJVMCode(node, ctx);
@@ -410,14 +397,43 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 	
 	@Override
 	public List<JVMBytecodeEntity> visit(ArrayAccessExpressionNode node, BranchContext ctx) {
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		
+		instructions.addAll(
+			node.getHolder().accept(this, ctx)
+		);
+		instructions.addAll(
+			node.getIndex().accept(this, ctx)
+		);
 		
-		return null;
+		ArrayType arrayType = (ArrayType) node.getHolder().getExpressionType();
+		
+		final String opcode = JVMBytecodeUtils.getOpcodePrefix(arrayType.getElementType());
+		
+		instructions.add(
+			new JVMBytecodeInstruction(opcode + "aload")
+		);
+		
+		return instructions;
 	}
 
 	@Override
 	public List<JVMBytecodeEntity> visit(PropertyAccessExpressionNode node, BranchContext ctx) {
-		return null;
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		
+		ExpressionASTNode holder = node.getPropertyHolder();
+		VarType holderType = holder.getExpressionType();
+		
+		String prop = node.getPropertyName();
+		
+		if (holderType.getTag() == Tag.ARRAY && "length".equals(prop)) {
+			instructions.addAll(
+				holder.accept(this, ctx)
+			);
+			instructions.add(new JVMBytecodeInstruction("arraylength"));
+		}
+		
+		return instructions;
 	}
 	
 	@Override
@@ -473,6 +489,29 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 	
 		if (actualCastExprType == VarType.INTEGER_PRIMITIVE_TYPE && targetType == VarType.REAL_PRIMITIVE_TYPE)
 			instructions.add(new JVMBytecodeInstruction("i2f"));
+		else if (actualCastExprType == VarType.INTEGER_PRIMITIVE_TYPE && targetType == VarType.BOOLEAN_PRIMITIVE_TYPE) {
+			String afterCheckLabel = "L" + ctx.labelCounter;
+			ctx.labelCounter.incCounter();
+			
+			instructions.addAll(
+				Arrays.asList(
+					new JVMBytecodeInstruction("dup"),
+					new JVMBytecodeInstruction("ifeq", afterCheckLabel),
+					
+					new JVMBytecodeInstruction("dup"),
+					new JVMBytecodeInstruction("iconst_1"),
+					new JVMBytecodeInstruction("if_icmple", afterCheckLabel),
+					
+					new JVMBytecodeInstruction("new", "java/lang/RuntimeException"),
+					new JVMBytecodeInstruction("dup"),
+					new JVMBytecodeInstruction("ldc", "\"unable to convert integer to boolean\""),
+					new JVMBytecodeInstruction("invokespecial", "java/lang/RuntimeException/<init>(Ljava/lang/String;)V"),
+					new JVMBytecodeInstruction("athrow"),
+					
+					new JVMBytecodeLabel(afterCheckLabel)
+				)
+			);
+		}
 		else if (actualCastExprType == VarType.BOOLEAN_PRIMITIVE_TYPE && targetType == VarType.REAL_PRIMITIVE_TYPE)
 			instructions.add(new JVMBytecodeInstruction("i2f"));
 		else if (actualCastExprType == VarType.REAL_PRIMITIVE_TYPE && targetType == VarType.INTEGER_PRIMITIVE_TYPE)

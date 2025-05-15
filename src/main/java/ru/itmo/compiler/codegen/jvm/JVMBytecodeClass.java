@@ -3,24 +3,33 @@ package ru.itmo.compiler.codegen.jvm;
 import java.util.Arrays;
 import java.util.List;
 
-import ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils;
-
 public class JVMBytecodeClass extends JVMBytecodeEntity {
 	private AccessSpec[] accessSpecs;
+	private String sourceName;
 	private String className;
 	private List<JVMBytecodeField> fields;
 	private List<JVMBytecodeMethod> methods;
 	
-	public JVMBytecodeClass(AccessSpec[] accessSpecs, String className, List<JVMBytecodeField> fields, List<JVMBytecodeMethod> methods) {
+	public JVMBytecodeClass(AccessSpec[] accessSpecs, String sourceName, String className, List<JVMBytecodeField> fields, List<JVMBytecodeMethod> methods) {
 		this.accessSpecs = accessSpecs;
-		this.className = JVMBytecodeUtils.formatDescriptor(className);
+		
+		this.sourceName = sourceName;
+		this.className = className;
 		
 		this.fields = fields;
 		this.methods = methods;
 	}
 	
+	public JVMBytecodeClass(AccessSpec[] accessSpecs, String className, List<JVMBytecodeField> fields, List<JVMBytecodeMethod> methods) {
+		this(accessSpecs, className, className, fields, methods);
+	}
+	
 	public AccessSpec[] getAccessSpecs() {
 		return accessSpecs;
+	}
+	
+	public String getSourceName() {
+		return sourceName;
 	}
 	
 	public String getClassName() {
@@ -38,11 +47,13 @@ public class JVMBytecodeClass extends JVMBytecodeEntity {
 	@Override
 	public String toString() {
 		return String.format(
-				".class %s %s\n"
+				".source %s\n"
+				+ ".class %s %s\n"
 				+ ".super java/lang/Object\n"
 				+ "\n%s\n"
 				+ "\n%s",
 				
+				sourceName,
 				String.join(
 					" ", 
 					Arrays

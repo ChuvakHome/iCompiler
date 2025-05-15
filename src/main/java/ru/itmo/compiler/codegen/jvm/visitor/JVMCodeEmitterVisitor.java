@@ -6,13 +6,13 @@ import static ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeClass;
+import ru.itmo.compiler.codegen.jvm.JVMBytecodeDirective;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeField;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction;
@@ -25,8 +25,10 @@ import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisi
 import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.lex.Token.TokenType;
 import ru.itmo.icompiler.semantic.ArrayType;
+import ru.itmo.icompiler.semantic.ArrayType.SizedArrayType;
 import ru.itmo.icompiler.semantic.FunctionType;
 import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
@@ -43,6 +45,7 @@ import ru.itmo.icompiler.syntax.ast.TypeDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableAssignmentASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.expression.ArrayAccessExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode.BinaryOperatorType;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
@@ -202,10 +205,14 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	
 	private FunctionType currentRoutineType;
 	
-	public JVMCodeEmitterVisitor() {
+	private String sourceName;
+	
+	public JVMCodeEmitterVisitor(String sourceName) {
 		globalVarTypes = new HashMap<>();
 		contextStack = new Stack<>();
 		expressionVisitor = new JVMCodeEmitterExpressionVisitor();
+		
+		this.sourceName = sourceName;
 	}
 	
 	public static final Map<VarType, String> PRIMITIVE_TYPE_MAPPER = Map.ofEntries(
@@ -280,6 +287,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		return Arrays.asList(
 					new JVMBytecodeClass(
 						classSpecs(JVMBytecodeClass.AccessSpec.PUBLIC, JVMBytecodeClass.AccessSpec.FINAL),
+						sourceName,
 						PROGRAM_CLASS_NAME,
 						programClassFields,
 						programClassMethods
@@ -311,21 +319,67 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(VariableDeclarationASTNode node, ExpressionVisitorContext ctx) {
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		
+		if (node.getToken() != null)
+			instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
+		
 		String varName = node.getVarName();
 		
 		int lvIndex = contextStack.peek().localVariablesCount++;
 		
 		ctx.localVarCtx.addLocalVariable(varName, lvIndex);
 		
-		if (node.getChildren().isEmpty())
-			return Collections.emptyList();
+		switch (node.getVarType().getTag()) {
+			case ARRAY: {
+				SizedArrayType arrayType = (SizedArrayType) node.getVarType();
+				VarType elementType = arrayType.getElementType();
+				
+				instructions.add(new JVMBytecodeInstruction("ldc", arrayType.getSize()));
+				
+				if (elementType.getTag() == Tag.PRIMITIVE)
+					instructions.add(new JVMBytecodeInstruction("newarray", JVMBytecodeUtils.getTypename(elementType)));
+				else if (elementType.getTag() == Tag.ARRAY) {
+					int dimensions = 1;
+					
+					while (elementType.getTag() == Tag.ARRAY) {
+						SizedArrayType elementArrayType = (SizedArrayType) elementType; 
+						
+						instructions.add(new JVMBytecodeInstruction("ldc", elementArrayType.getSize()));
+						++dimensions;
+						
+						elementType = elementArrayType.getElementType(); 
+					}
+					
+					instructions.add(
+						new JVMBytecodeInstruction(
+							"multianewarray", 
+							getJVMTypeDescriptor(arrayType),
+							dimensions
+						)
+					);
+				}
+				
+				instructions.add(new JVMBytecodeInstruction("astore", lvIndex));
+				
+				return instructions;
+			}
+		}
 		
-		return node.getChild(0).accept(this, ctx);
+		if (node.getChildren().isEmpty())
+			return instructions;
+		
+		instructions.addAll(
+			node.getChild(0).accept(this, ctx)
+		);
+		
+		return instructions;
 	}
 
 	@Override
 	public List<JVMBytecodeEntity> visit(VariableAssignmentASTNode node, ExpressionVisitorContext ctx) {
-		List<JVMBytecodeEntity> assignInsrs = new ArrayList<>();
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
 		ExpressionASTNode leftSideNode = node.getLeftSide();
 		VarType requiredType = leftSideNode.getExpressionType();
@@ -333,7 +387,6 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		ExpressionASTNode valueNode = node.getValueNode();
 		
 		List<JVMBytecodeEntity> valueCompInstrs = valueNode.accept(expressionVisitor, ctx.toBranchContext());
-		assignInsrs.addAll(valueCompInstrs);
 		
 		switch (leftSideNode.getExpressionNodeType()) {
 			case VARIABLE_EXPR_NODE: {
@@ -341,10 +394,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				
 				String assignVarName = varExprNode.getVariable();
 				
+				instructions.addAll(valueCompInstrs);
+				
 				if (ctx.localVarCtx.containsLocalVarIndex(assignVarName)) {
 					int lvIndex = ctx.localVarCtx.getLocalVarIndex(assignVarName);
 					
-					assignInsrs.add(
+					instructions.add(
 						lvIndex <= 3 
 						? new JVMBytecodeInstruction(
 								JVMBytecodeUtils.getOpcodePrefix(requiredType) + "store_" + lvIndex
@@ -355,7 +410,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 							)
 					);
 				} else {
-					assignInsrs.add(
+					instructions.add(
 						new JVMBytecodeInstruction(
 							"putstatic", 
 							PROGRAM_CLASS_NAME + "/" + assignVarName, 
@@ -366,9 +421,31 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				
 				break;
 			}
+			case ARRAY_ACCESS_EXPR_NODE: {
+				ArrayAccessExpressionNode arrAccNode = (ArrayAccessExpressionNode) leftSideNode;
+				
+				ExpressionASTNode holderExpr = arrAccNode.getHolder();
+				ArrayType arrayType = (ArrayType) holderExpr.getExpressionType();
+				
+				instructions.addAll(
+					holderExpr.accept(expressionVisitor, ctx.toBranchContext())
+				);
+				instructions.addAll(
+					arrAccNode.getIndex().accept(expressionVisitor, ctx.toBranchContext())
+				);
+				instructions.addAll(valueCompInstrs);
+				
+				final String opcode = JVMBytecodeUtils.getOpcodePrefix(arrayType.getElementType());
+				
+				instructions.add(
+					new JVMBytecodeInstruction(opcode + "astore")
+				);
+				
+				break;
+			}
 		}
 		
-		return assignInsrs;
+		return instructions;
 	}
 
 	@Override
@@ -443,7 +520,9 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		VarType requiredReturnType = currentRoutineType.getReturnType();
 		
-		List<JVMBytecodeEntity> instructions = new ArrayList<>(); 
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
+		
 		instructions.addAll(
 			returnValueExprNode.accept(expressionVisitor, ctx.toBranchContext())
 		);
@@ -459,6 +538,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	@Override
 	public List<JVMBytecodeEntity> visit(IfThenElseStatementASTNode node, ExpressionVisitorContext ctx) {
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
 		String thenLabel = "L" + ctx.getLabelCounter().getCounter();
 		ctx.getLabelCounter().incCounter();
@@ -556,6 +636,9 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	public List<JVMBytecodeEntity> visit(WhileStatementASTNode node, ExpressionVisitorContext ctx) {
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		
+		if (node.getToken() != null)
+			instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
+		
 		String loopStartLabel = "L" + ctx.getLabelCounter().getCounter();
 		ctx.getLabelCounter().incCounter();
 		
@@ -599,6 +682,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	@Override
 	public List<JVMBytecodeEntity> visit(BreakStatementASTNode node, ExpressionVisitorContext ctx) {
 		return Arrays.asList(
+					new JVMBytecodeDirective("line", node.getLineNumber()),
 					new JVMBytecodeInstruction("goto", ctx.loopEndLabel)
 				);
 	}
@@ -606,6 +690,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	@Override
 	public List<JVMBytecodeEntity> visit(PrintStatementASTNode node, ExpressionVisitorContext ctx) {
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
 		JVMBytecodeInstruction getStdoutInstr = new JVMBytecodeInstruction("getstatic", "java/lang/System/out", "Ljava/io/PrintStream;");
 		JVMBytecodeInstruction invokePrint = new JVMBytecodeInstruction("invokevirtual", "java/io/PrintStream/print(Ljava/lang/String;)V");
@@ -651,8 +736,6 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(ExpressionASTNode node, ExpressionVisitorContext ctx) {
-//		System.out.println("DEBUG: " + node.toString(0));
-		
 		if (node.getExpressionType() == VarType.BOOLEAN_PRIMITIVE_TYPE) {
 			List<JVMBytecodeEntity> instructions = new ArrayList<>();
 			
