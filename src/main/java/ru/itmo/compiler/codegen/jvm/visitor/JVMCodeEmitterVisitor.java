@@ -6,6 +6,7 @@ import static ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -29,9 +30,9 @@ import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.lex.Token.TokenType;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.ArrayType.SizedArrayType;
-import ru.itmo.icompiler.semantic.RecordType.RecordProperty;
 import ru.itmo.icompiler.semantic.FunctionType;
 import ru.itmo.icompiler.semantic.RecordType;
+import ru.itmo.icompiler.semantic.RecordType.RecordProperty;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
@@ -247,6 +248,42 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		return "FV#" + freshVariableCount++;
 	}
 	
+	private static List<JVMBytecodeEntity> initArrayVar(SizedArrayType arrayType) {
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		VarType elementType = arrayType.getElementType();
+		
+		instructions.add(
+			JVMCodeEmitterExpressionVisitor.getLoadIntConstInstruction(arrayType.getSize())
+		);
+		
+		if (elementType.getTag() == Tag.PRIMITIVE)
+			instructions.add(new JVMBytecodeInstruction("newarray", JVMBytecodeUtils.getTypename(elementType)));
+		else if (elementType.getTag() == Tag.ARRAY) {
+			int dimensions = 1;
+			
+			while (elementType.getTag() == Tag.ARRAY) {
+				SizedArrayType elementArrayType = (SizedArrayType) elementType; 
+				
+				instructions.add(
+					JVMCodeEmitterExpressionVisitor.getLoadIntConstInstruction(elementArrayType.getSize())
+				);
+				++dimensions;
+				
+				elementType = elementArrayType.getElementType(); 
+			}
+			
+			instructions.add(
+				new JVMBytecodeInstruction(
+					"multianewarray", 
+					getJVMTypeDescriptor(arrayType),
+					dimensions
+				)
+			);
+		}
+		
+		return instructions;
+	}
+	
 	private static List<JVMBytecodeEntity> initRecordVar(RecordType recordType) {
 		String recordJVMClass = PROGRAM_JVM_PACKAGE + "/" + JVMBytecodeUtils.getTypeDescriptor(recordType);
 		
@@ -258,6 +295,114 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		);
 	}
 	
+//	private List<JVMBytecodeEntity> emitCodeForProgramClassInit() {
+//
+//	}
+	
+	private static List<JVMBytecodeEntity> emitCodeForRecordClass(RecordType recordType) {
+		List<JVMBytecodeEntity> initMethodInstructions = new ArrayList<>();
+		
+		int localVarsCount = 1;
+		int stackSize = 10;
+		
+		initMethodInstructions.addAll(
+			Arrays.asList(
+				new JVMBytecodeInstruction("aload_0"),
+				new JVMBytecodeInstruction("invokespecial", "java/lang/Object/<init>()V")
+			)
+		);
+		
+		final String recordClassName = PROGRAM_JVM_PACKAGE + "/" + JVMBytecodeUtils.getTypeDescriptor(recordType);
+		List<JVMBytecodeField> programClassFields = new ArrayList<>();
+		
+		int fieldCounter = 0;
+		
+		for (VarType propType: recordType.getPropertiesTypes().values()) {
+			String fieldName = "field" + fieldCounter;
+			String propJVMTypeDesc = getJVMTypeDescriptor(propType);
+			
+			programClassFields.add(
+				new JVMBytecodeField(
+					fieldSpecs(JVMBytecodeField.AccessSpec.PUBLIC),
+					fieldName,
+					propJVMTypeDesc
+				)
+			);
+			
+			if (propType.getTag() != Tag.PRIMITIVE) {
+				initMethodInstructions.add(
+					new JVMBytecodeInstruction("aload_0") // load this
+				);
+				
+				switch (propType.getTag()) {
+					case RECORD: {
+						initMethodInstructions.addAll(
+							initRecordVar((RecordType) propType)
+						);
+						break;
+					}
+					case ARRAY: {
+						initMethodInstructions.addAll(
+							initArrayVar((SizedArrayType) propType)
+						);
+						break;
+					}
+				}
+				
+				initMethodInstructions.add(
+					new JVMBytecodeInstruction(
+							"putfield", 
+							recordClassName + "/" + fieldName,
+							propJVMTypeDesc
+						)
+				);
+			}
+			
+			++fieldCounter;
+		}
+		
+		initMethodInstructions.add(new JVMBytecodeInstruction("return"));
+		
+		return Arrays.asList(
+				new JVMBytecodeClass(
+					classSpecs(JVMBytecodeClass.AccessSpec.PUBLIC, JVMBytecodeClass.AccessSpec.FINAL),
+					JVMBytecodeUtils.getTypeDescriptor(recordType),
+					recordClassName,
+					programClassFields,
+					Arrays.asList(
+						new JVMBytecodeMethod(
+							methodSpecs(),
+							"<init>",
+							Collections.emptyList(),
+							"V",
+							localVarsCount,
+							stackSize,
+							initMethodInstructions
+						)
+					)
+				)
+			);
+	}
+	
+	private void saveRecordVarDeclaration(RecordType recordType) {
+		Stack<RecordType> recordTypes = new Stack<>();
+		
+		recordTypes.add(recordType);
+		
+		while (!recordTypes.empty()) {
+			RecordType newRecordType = recordTypes.pop();
+			declaredRecords.add(newRecordType);
+			
+			newRecordType.getPropertiesTypes().values().forEach(propertyType -> {
+				while (propertyType.getTag() == VarType.Tag.ARRAY)
+					propertyType = ((ArrayType) propertyType).getElementType();
+				
+				if (propertyType.getTag() == VarType.Tag.RECORD && !recordTypes.contains(propertyType))
+					recordTypes.add((RecordType) propertyType);
+			});
+		}
+	}
+	
 	private JVMBytecodeField processGlobalVarDecl(VariableDeclarationASTNode node) {
 		String varName = node.getVarName();
 		VarType varType = node.getVarType();
@@ -266,7 +411,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		String typeDescriptor = getJVMTypeDescriptor(varType);
 		
 		if (varType.getTag() == Tag.RECORD)
-			declaredRecords.add((RecordType) varType);
+			saveRecordVarDeclaration((RecordType) varType);
 		
 		return new JVMBytecodeField(
 				fieldSpecs(
@@ -306,15 +451,18 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			}
 		}
 		
-		return Arrays.asList(
-					new JVMBytecodeClass(
-						classSpecs(JVMBytecodeClass.AccessSpec.PUBLIC, JVMBytecodeClass.AccessSpec.FINAL),
-						sourceName,
-						PROGRAM_CLASS_NAME,
-						programClassFields,
-						programClassMethods
-					)
-				);
+		List<JVMBytecodeEntity> programClasses = new ArrayList<>();
+		programClasses.add(new JVMBytecodeClass(
+				classSpecs(JVMBytecodeClass.AccessSpec.PUBLIC, JVMBytecodeClass.AccessSpec.FINAL),
+				sourceName,
+				PROGRAM_CLASS_NAME,
+				programClassFields,
+				programClassMethods
+			));
+		
+		declaredRecords.stream().map(JVMCodeEmitterVisitor::emitCodeForRecordClass).forEachOrdered(programClasses::addAll);
+		
+		return programClasses;
 	}
 
 	@Override
@@ -356,36 +504,10 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		switch (varType.getTag()) {
 			case ARRAY: {
 				SizedArrayType arrayType = (SizedArrayType) node.getVarType();
-				VarType elementType = arrayType.getElementType();
 				
-				instructions.add(
-					JVMCodeEmitterExpressionVisitor.getLoadIntConstInstruction(arrayType.getSize())
+				instructions.addAll(
+					initArrayVar(arrayType)
 				);
-				
-				if (elementType.getTag() == Tag.PRIMITIVE)
-					instructions.add(new JVMBytecodeInstruction("newarray", JVMBytecodeUtils.getTypename(elementType)));
-				else if (elementType.getTag() == Tag.ARRAY) {
-					int dimensions = 1;
-					
-					while (elementType.getTag() == Tag.ARRAY) {
-						SizedArrayType elementArrayType = (SizedArrayType) elementType; 
-						
-						instructions.add(
-								JVMCodeEmitterExpressionVisitor.getLoadIntConstInstruction(elementArrayType.getSize())
-						);
-						++dimensions;
-						
-						elementType = elementArrayType.getElementType(); 
-					}
-					
-					instructions.add(
-						new JVMBytecodeInstruction(
-							"multianewarray", 
-							getJVMTypeDescriptor(arrayType),
-							dimensions
-						)
-					);
-				}
 				
 				instructions.add(new JVMBytecodeInstruction("astore", lvIndex));
 				
@@ -393,7 +515,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			}
 			case RECORD: {
 				RecordType varRecordType = (RecordType) varType;
-				declaredRecords.add(varRecordType);
+				saveRecordVarDeclaration(varRecordType);
 				
 				instructions.addAll(
 					initRecordVar(varRecordType)
@@ -471,6 +593,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				instructions.addAll(
 					arrAccNode.getIndex().accept(expressionVisitor, ctx.toBranchContext())
 				);
+				instructions.addAll(
+					Arrays.asList(
+						JVMCodeEmitterExpressionVisitor.getLoadIntConstInstruction(-1),
+						new JVMBytecodeInstruction("iadd")
+					)
+				);
 				instructions.addAll(valueCompInstrs);
 				
 				final String opcode = JVMBytecodeUtils.getOpcodePrefixForArray(arrayType.getElementType());
@@ -528,12 +656,18 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(RoutineDeclarationASTNode node, ExpressionVisitorContext ctx) {
+		VarType routineRetType = node.getResultType();
+		
+		if (routineRetType.getTag() == Tag.RECORD)
+			saveRecordVarDeclaration((RecordType) routineRetType);
+		
 		return null;
 	}
 
 	@Override
 	public List<JVMBytecodeEntity> visit(RoutineDefinitionASTNode node, ExpressionVisitorContext ctx) {
 		RoutineDeclarationASTNode routineHeader = node.getRoutineDeclaration();
+		routineHeader.accept(this, ctx); // save info about return type
 		
 		String methodName = routineHeader.getRoutineName();
 		
@@ -809,9 +943,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(ExpressionASTNode node, ExpressionVisitorContext ctx) {
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		instructions.add(
+			new JVMBytecodeDirective("line", node.getLineNumber())
+		);
+		
 		if (node.getExpressionType() == VarType.BOOLEAN_PRIMITIVE_TYPE) {
-			List<JVMBytecodeEntity> instructions = new ArrayList<>();
-			
 			String thenLabel = ctx.thenLabel;
 			
 			if (thenLabel == null) {
@@ -850,9 +987,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 						)
 				);
 			}
-			
-			return instructions;
-		} else
-			return node.accept(expressionVisitor, ctx.toBranchContext());
+		} else {
+			instructions.addAll(
+				node.accept(expressionVisitor, ctx.toBranchContext())
+			);
+		}
+		
+		return instructions;
 	}
 }

@@ -1,5 +1,7 @@
 package ru.itmo.icompiler.semantic;
 
+import java.util.Objects;
+
 import ru.itmo.icompiler.semantic.VarType.CompoundType;
 
 public class ArrayType extends CompoundType {
@@ -17,6 +19,11 @@ public class ArrayType extends CompoundType {
 	
 	public VarType getElementType() {
 		return elementType;
+	}
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(VarType.Tag.ARRAY, elementType);
 	}
 	
 	@Override
@@ -43,6 +50,11 @@ public class ArrayType extends CompoundType {
 		
 		public int getSize() {
 			return size;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Objects.hash(VarType.Tag.ARRAY, size, elementType);
 		}
 		
 		@Override

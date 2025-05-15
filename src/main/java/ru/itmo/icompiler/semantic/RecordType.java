@@ -1,10 +1,11 @@
 package ru.itmo.icompiler.semantic;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeSet;
 
 import ru.itmo.icompiler.semantic.VarType.CompoundType;
@@ -24,6 +25,10 @@ public class RecordType extends CompoundType {
 		
 		public RecordProperty(VarType type, String name) {
 			this(type, name, null);
+		}
+		
+		public int hashCode() {
+			return Objects.hash(name, type);
 		}
 		
 		public boolean equals(Object o) {
@@ -79,6 +84,16 @@ public class RecordType extends CompoundType {
 	
 	public VarType getPropertyType(String prop) {
 		return properties.get(prop).type;
+	}
+	
+	@Override
+	public int hashCode() {
+		List objects = new ArrayList<>();
+		
+		objects.add(VarType.Tag.RECORD);
+		properties.values().forEach(objects::add);
+		
+		return Objects.hash(objects.toArray());
 	}
 
 	@Override
