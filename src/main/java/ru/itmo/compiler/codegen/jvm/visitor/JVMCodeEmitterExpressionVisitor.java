@@ -16,7 +16,9 @@ import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.IntCounter;
 import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.LocalVariableContext;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.FunctionType;
+import ru.itmo.icompiler.semantic.RecordType;
 import ru.itmo.icompiler.semantic.VarType;
+import ru.itmo.icompiler.semantic.RecordType.RecordProperty;
 import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.visitor.ExpressionNodeVisitor;
 import ru.itmo.icompiler.syntax.ast.expression.ArrayAccessExpressionNode;
@@ -111,6 +113,17 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 			Map.entry(BinaryOperatorType.GE_BINOP, BinaryOperatorType.LT_BINOP)
 	);
 
+	public static JVMBytecodeEntity getLoadIntConstInstruction(int i) {
+		if (i == -1)
+			return new JVMBytecodeInstruction("iconst_m1");
+		else if (i >= 0 && i <= 5)
+			return new JVMBytecodeInstruction("iconst_" + i);
+		else if (i >= Byte.MIN_VALUE && i <= Byte.MAX_VALUE)
+			return new JVMBytecodeInstruction("bipush", i);
+		else
+			return new JVMBytecodeInstruction("ldc", i);
+	}
+	
 	public static JVMBytecodeEntity getLoadVariableInstr(String varName, VarType varType, LocalVariableContext localVariableContext) {
 		if (localVariableContext.containsLocalVarIndex(varName)) {
 			int lvIndex = localVariableContext.getLocalVarIndex(varName);
@@ -144,19 +157,8 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 	@Override
 	public List<JVMBytecodeEntity> visit(IntegerValueExpressionNode node, BranchContext ctx) {
 		int val = node.getValue();
-		
-		JVMBytecodeEntity iconstInstr = null;
-		
-		if (val == -1)
-			iconstInstr = new JVMBytecodeInstruction("iconst_m1");
-		else if (val >= 0 && val <= 5)
-			iconstInstr = new JVMBytecodeInstruction("iconst_" + val);
-		else if (val >= Byte.MIN_VALUE && val <= Byte.MAX_VALUE)
-			iconstInstr = new JVMBytecodeInstruction("bipush", val);
-		else
-			iconstInstr = new JVMBytecodeInstruction("ldc", val);
-		
-		return Arrays.asList(iconstInstr);
+
+		return Arrays.asList(getLoadIntConstInstruction(val));
 	}
 
 	@Override
@@ -408,7 +410,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		
 		ArrayType arrayType = (ArrayType) node.getHolder().getExpressionType();
 		
-		final String opcode = JVMBytecodeUtils.getOpcodePrefix(arrayType.getElementType());
+		final String opcode = JVMBytecodeUtils.getOpcodePrefixForArray(arrayType.getElementType());
 		
 		instructions.add(
 			new JVMBytecodeInstruction(opcode + "aload")
@@ -426,11 +428,34 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		
 		String prop = node.getPropertyName();
 		
-		if (holderType.getTag() == Tag.ARRAY && "length".equals(prop)) {
-			instructions.addAll(
+		instructions.addAll(
 				holder.accept(this, ctx)
 			);
+		
+		if (holderType.getTag() == Tag.ARRAY && "length".equals(prop)) {
 			instructions.add(new JVMBytecodeInstruction("arraylength"));
+		} else {
+			RecordType recordType = (RecordType) holderType;
+			
+			VarType fieldType = null;
+			int fieldIndex = 0;
+			
+			for (RecordProperty recordProperty: recordType.getProperties()) {
+				if (recordProperty.name.equals(prop)) {
+					fieldType = recordProperty.type;
+					
+					break;
+				}
+				
+				++fieldIndex;
+			}
+			
+			instructions.add(new JVMBytecodeInstruction(
+					"getfield", 
+					JVMCodeEmitterVisitor.PROGRAM_JVM_PACKAGE + "/" + JVMBytecodeUtils.getTypeDescriptor(recordType) + "/field" + fieldIndex,
+					JVMCodeEmitterVisitor.getJVMTypeDescriptor(fieldType)
+				)
+			);
 		}
 		
 		return instructions;

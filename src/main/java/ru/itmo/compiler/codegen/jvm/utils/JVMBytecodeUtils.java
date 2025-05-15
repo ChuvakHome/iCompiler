@@ -91,4 +91,19 @@ public final class JVMBytecodeUtils {
 				return PRIMITIVE_TYPE_OPCODE_MAPPER.get(varType);
 		}
 	}
+	
+	public static String getOpcodePrefixForArray(VarType varType) {
+		switch (varType.getTag()) {
+			case ARRAY:
+				return "a";
+			case RECORD:
+				return "a";
+			default:
+				return varType == VarType.INTEGER_PRIMITIVE_TYPE
+						? "i"
+						: varType == VarType.BOOLEAN_PRIMITIVE_TYPE
+						? "b"
+						: "f";
+		}
+	}
 }

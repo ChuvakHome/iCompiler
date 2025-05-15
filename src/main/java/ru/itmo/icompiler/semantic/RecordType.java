@@ -57,7 +57,7 @@ public class RecordType extends CompoundType {
 	}
 	
 	public Map<String, VarType> getPropertiesTypes() {
-		Map<String, VarType> propTypes = new HashMap<>();
+		Map<String, VarType> propTypes = new LinkedHashMap<>();
 		
 		for (Map.Entry<String, RecordProperty> entry: properties.entrySet())
 			propTypes.put(entry.getKey(), entry.getValue().type);
