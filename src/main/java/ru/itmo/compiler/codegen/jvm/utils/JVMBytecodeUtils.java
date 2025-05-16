@@ -1,9 +1,13 @@
 package ru.itmo.compiler.codegen.jvm.utils;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeClass;
+import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeField;
+import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction;
 import ru.itmo.compiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.RecordType;
@@ -56,6 +60,19 @@ public final class JVMBytecodeUtils {
 		return PRIMITIVE_TYPENAME_MAPPER.get(varType);
 	}
 	
+	public static List<JVMBytecodeEntity> pushDefaultValueForType(VarType type) {
+		if (type == VarType.INTEGER_PRIMITIVE_TYPE || type == VarType.BOOLEAN_PRIMITIVE_TYPE) {
+			return List.of(
+				new JVMBytecodeInstruction("iconst_0")
+			);
+		} else if (type == VarType.REAL_PRIMITIVE_TYPE) {
+			return List.of(
+				new JVMBytecodeInstruction("ldc", "0.0")
+			);
+		} else
+			return Collections.emptyList();
+	}
+	
 	public static String getTypeDescriptor(VarType varType) {
 		switch (varType.getTag()) {
 			case ARRAY: {
@@ -63,7 +80,7 @@ public final class JVMBytecodeUtils {
 				return "A" + getTypeDescriptor(arrayType.getElementType());
 			}
 			case RECORD: {
-				RecordType recordType = (RecordType) varType; 
+				RecordType recordType = (RecordType) varType;
 				
 				return String.format(
 							"R_%s_",

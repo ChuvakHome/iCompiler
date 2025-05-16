@@ -133,7 +133,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 			return new JVMBytecodeInstruction(
 					"getstatic", 
 					JVMCodeEmitterVisitor.PROGRAM_CLASS_NAME + "/" + varName, 
-					JVMBytecodeUtils.getTypeDescriptor(varType)
+					JVMCodeEmitterVisitor.getMangledTypeName(varType)
 				);
 		}
 	}
@@ -190,11 +190,11 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 				arg.accept(this, ctx)
 			);
 			
-			sb.append(JVMCodeEmitterVisitor.getJVMTypeDescriptor(arg.getExpressionType()));
+			sb.append(JVMCodeEmitterVisitor.getMangledTypeName(arg.getExpressionType()));
 		});
 		
 		sb.append(')')
-			.append(JVMCodeEmitterVisitor.getJVMTypeDescriptor(routineType.getReturnType()));
+			.append(JVMCodeEmitterVisitor.getMangledTypeName(routineType.getReturnType()));
 		
 		instructions.add(
 			new JVMBytecodeInstruction("invokestatic", sb.toString())
@@ -468,7 +468,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 			instructions.add(new JVMBytecodeInstruction(
 					"getfield", 
 					JVMCodeEmitterVisitor.PROGRAM_JVM_PACKAGE + "/" + JVMBytecodeUtils.getTypeDescriptor(recordType) + "/field" + fieldIndex,
-					JVMCodeEmitterVisitor.getJVMTypeDescriptor(fieldType)
+					JVMCodeEmitterVisitor.getMangledTypeName(fieldType)
 				)
 			);
 		}

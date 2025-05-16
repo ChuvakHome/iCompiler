@@ -210,6 +210,9 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	
 	private FunctionType currentRoutineType;
 	
+//	private Map<String, VariableAssignmentASTNode> globalVarsAssignments;
+//	private Map<String, VarType> globalComponentVars;
+	
 	private Set<RecordType> declaredRecords;
 	
 	private String sourceName;
@@ -217,6 +220,10 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	public JVMCodeEmitterVisitor(String sourceName) {
 		contextStack = new Stack<>();
 		expressionVisitor = new JVMCodeEmitterExpressionVisitor();
+		
+//		globalComponentVars = new HashMap<>();
+//		globalVarsAssignments = new HashMap<>();
+		
 		declaredRecords = new HashSet<>();
 		
 		this.sourceName = sourceName;
@@ -230,11 +237,11 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		Map.entry(VarType.VOID_TYPE, "V")
 	);
 	
-	public static String getJVMTypeDescriptor(VarType varType) {
+	public static String getMangledTypeName(VarType varType) {
 		switch (varType.getTag()) {
 			case ARRAY: {
 				ArrayType arrayType = (ArrayType) varType;
-				return "[" + getJVMTypeDescriptor(arrayType.getElementType());
+				return "[" + getMangledTypeName(arrayType.getElementType());
 			}
 			case RECORD: {
 				return "L" + PROGRAM_JVM_PACKAGE + "/" + JVMBytecodeUtils.getTypeDescriptor(varType) + ";"; // to be continued
@@ -275,7 +282,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			instructions.add(
 				new JVMBytecodeInstruction(
 					"multianewarray", 
-					getJVMTypeDescriptor(arrayType),
+					getMangledTypeName(arrayType),
 					dimensions
 				)
 			);
@@ -295,9 +302,69 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		);
 	}
 	
-//	private List<JVMBytecodeEntity> emitCodeForProgramClassInit() {
-//
-//	}
+	private JVMBytecodeMethod emitCodeForProgramClassInit(Map<String, VariableDeclarationASTNode> globalDeclarations) {
+		List<JVMBytecodeEntity> clinitMethodInstructions = new ArrayList<>();
+		
+		int localVarsCount = 1;
+		int stackSize = 10;
+		
+		IntCounter labelCounter = new IntCounter(); 
+		
+		for (Map.Entry<String, VariableDeclarationASTNode> entry: globalDeclarations.entrySet()) {
+			String varName = entry.getKey();
+			
+			VariableDeclarationASTNode declNode = entry.getValue();
+			VarType varType = declNode.getVarType();
+			
+			switch (varType.getTag()) {
+				case PRIMITIVE: {
+					if (declNode.getChildren().isEmpty()) {
+						clinitMethodInstructions.addAll(
+							JVMBytecodeUtils.pushDefaultValueForType(varType)
+						);
+					} else {
+						VariableAssignmentASTNode assignNode = (VariableAssignmentASTNode) declNode.getChild(0);
+						ExpressionASTNode assignExprNode = assignNode.getValueNode();
+						clinitMethodInstructions.addAll(
+							assignExprNode.accept(expressionVisitor, new BranchContext(null, null, null, labelCounter))
+						);
+					}
+					
+					break;
+				} 
+				case ARRAY: {
+					clinitMethodInstructions.addAll(
+						initArrayVar((SizedArrayType) varType)
+					);
+					break;
+				} 
+				case RECORD: {
+					clinitMethodInstructions.addAll(
+						initRecordVar((RecordType) varType)
+					);
+					break;
+				}
+			}
+			
+			clinitMethodInstructions.add(
+				new JVMBytecodeInstruction("putstatic", PROGRAM_CLASS_NAME + "/" + varName, getMangledTypeName(varType))
+			);
+		}
+		
+		clinitMethodInstructions.add(
+			new JVMBytecodeInstruction("return")
+		);
+		
+		return new JVMBytecodeMethod(
+					methodSpecs(JVMBytecodeMethod.AccessSpec.STATIC),
+					"<clinit>",
+					Collections.emptyList(),
+					"V",
+					localVarsCount,
+					stackSize,
+					clinitMethodInstructions
+				);
+	}
 	
 	private static List<JVMBytecodeEntity> emitCodeForRecordClass(RecordType recordType) {
 		List<JVMBytecodeEntity> initMethodInstructions = new ArrayList<>();
@@ -319,7 +386,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		for (VarType propType: recordType.getPropertiesTypes().values()) {
 			String fieldName = "field" + fieldCounter;
-			String propJVMTypeDesc = getJVMTypeDescriptor(propType);
+			String propJVMTypeDesc = getMangledTypeName(propType);
 			
 			programClassFields.add(
 				new JVMBytecodeField(
@@ -408,7 +475,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		VarType varType = node.getVarType();
 		
 		String fieldName = varName;
-		String typeDescriptor = getJVMTypeDescriptor(varType);
+		String typeDescriptor = getMangledTypeName(varType);
 		
 		if (varType.getTag() == Tag.RECORD)
 			saveRecordVarDeclaration((RecordType) varType);
@@ -450,6 +517,10 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 					break;
 			}
 		}
+		
+		programClassMethods.add(
+			emitCodeForProgramClassInit(globalVarsDeclarations) // add <clinit>
+		); 
 		
 		List<JVMBytecodeEntity> programClasses = new ArrayList<>();
 		programClasses.add(new JVMBytecodeClass(
@@ -638,7 +709,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				instructions.add(new JVMBytecodeInstruction(
 						"putfield", 
 						JVMCodeEmitterVisitor.PROGRAM_JVM_PACKAGE + "/" + JVMBytecodeUtils.getTypeDescriptor(recordType) + "/field" + fieldIndex,
-						JVMCodeEmitterVisitor.getJVMTypeDescriptor(fieldType)
+						JVMCodeEmitterVisitor.getMangledTypeName(fieldType)
 					)
 				);
 				
@@ -661,6 +732,11 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		if (routineRetType.getTag() == Tag.RECORD)
 			saveRecordVarDeclaration((RecordType) routineRetType);
 		
+		for (VariableDeclarationASTNode argDecl: node.getArgumentsDeclarations()) {
+			if (argDecl.getVarType().getTag() == Tag.RECORD)
+				saveRecordVarDeclaration((RecordType) argDecl.getVarType());
+		}
+		
 		return null;
 	}
 
@@ -674,7 +750,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		int argsCount = routineHeader.getArgumentsDeclarations().size();
 		
 		List<String> argsTypesDescriptors = new ArrayList<>(argsCount);
-		String returnTypeDescriptor = getJVMTypeDescriptor(routineHeader.getResultType());
+		String returnTypeDescriptor = getMangledTypeName(routineHeader.getResultType());
 		
 		int argnum = 0;
 		
@@ -687,7 +763,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			
 			routineLVCtx.addLocalVariable(argName, argnum++);
 			
-			String jvmTypeDescriptor = JVMCodeEmitterVisitor.getJVMTypeDescriptor(argType);
+			String jvmTypeDescriptor = JVMCodeEmitterVisitor.getMangledTypeName(argType);
 			
 			argsTypesDescriptors.add(jvmTypeDescriptor);
 		}
@@ -794,12 +870,14 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(ForInRangeStatementASTNode node, ExpressionVisitorContext ctx) {
+		Token fakeToken = new Token(node.getLineNumber(), node.getLineOffset(), null, null);
+		
 		CompoundStatementASTNode scopedStmt = new CompoundStatementASTNode(null);
 		
-		VariableExpressionNode counterVarExpr = new VariableExpressionNode(null, new Token(-1, -1, TokenType.IDENTIFIER, node.getIterVariable()));
+		VariableExpressionNode counterVarExpr = new VariableExpressionNode(null, new Token(node.getLineNumber(), node.getLineOffset(), TokenType.IDENTIFIER, node.getIterVariable()));
 		counterVarExpr.setExpressionType(VarType.INTEGER_PRIMITIVE_TYPE);
 		
-		VariableDeclarationASTNode counterVarDecl = new VariableDeclarationASTNode(null, VarType.INTEGER_PRIMITIVE_TYPE, null, node.getIterVariable());
+		VariableDeclarationASTNode counterVarDecl = new VariableDeclarationASTNode(null, VarType.INTEGER_PRIMITIVE_TYPE, fakeToken, node.getIterVariable());
 		counterVarDecl.addChild(
 			new VariableAssignmentASTNode(null, 
 				counterVarExpr, 
@@ -811,14 +889,14 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		ExpressionASTNode conditionExpr;
 		
 		if (node.isReversed()) {
-			conditionExpr = new BinaryOperatorExpressionNode(null, null, BinaryOperatorType.GE_BINOP, counterVarExpr, node.getFromExpression()); 
+			conditionExpr = new BinaryOperatorExpressionNode(null, fakeToken, BinaryOperatorType.GE_BINOP, counterVarExpr, node.getFromExpression()); 
 		} else {
-			conditionExpr = new BinaryOperatorExpressionNode(null, null, BinaryOperatorType.LE_BINOP, counterVarExpr, node.getToExpression());
+			conditionExpr = new BinaryOperatorExpressionNode(null, fakeToken, BinaryOperatorType.LE_BINOP, counterVarExpr, node.getToExpression());
 		}
 			
 		conditionExpr.setExpressionType(VarType.BOOLEAN_PRIMITIVE_TYPE);
 		
-		ExpressionASTNode mutExpr = new BinaryOperatorExpressionNode(null, null, node.isReversed() ? BinaryOperatorType.SUB_BINOP : BinaryOperatorType.ADD_BINOP, counterVarExpr, new IntegerValueExpressionNode(null, null, 1));
+		ExpressionASTNode mutExpr = new BinaryOperatorExpressionNode(null, fakeToken, node.isReversed() ? BinaryOperatorType.SUB_BINOP : BinaryOperatorType.ADD_BINOP, counterVarExpr, new IntegerValueExpressionNode(null, null, 1));
 		mutExpr.setExpressionType(VarType.INTEGER_PRIMITIVE_TYPE);
 		
 		WhileStatementASTNode whileStmt = new WhileStatementASTNode(null, conditionExpr, node.getBody());
@@ -835,8 +913,50 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	}
 
 	@Override
-	public List<JVMBytecodeEntity> visit(ForEachStatementASTNode node, ExpressionVisitorContext ctx) {		
-		return null;
+	public List<JVMBytecodeEntity> visit(ForEachStatementASTNode node, ExpressionVisitorContext ctx) {
+		Token fakeToken = new Token(node.getLineNumber(), node.getLineOffset(), null, null);
+		
+		ExpressionASTNode arrayExpr = node.getArrayExpression();
+		
+		String forCounter = newFreshVariable();
+		String arrayElementVarname = node.getIterVariable();
+		
+		ExpressionASTNode counterExpr = new VariableExpressionNode(null, new Token(node.getLineNumber(), node.getLineOffset(), TokenType.IDENTIFIER, forCounter));
+		counterExpr.setExpressionType(VarType.INTEGER_PRIMITIVE_TYPE);
+		
+		ExpressionASTNode lvalue = new VariableExpressionNode(null, new Token(node.getLineNumber(), node.getLineOffset(), TokenType.IDENTIFIER, arrayElementVarname));
+		lvalue.setExpressionType(((ArrayType) arrayExpr.getExpressionType()).getElementType());
+		
+		VariableDeclarationASTNode counterDeclNode = new VariableDeclarationASTNode(null, VarType.INTEGER_PRIMITIVE_TYPE, fakeToken, arrayElementVarname);
+		counterDeclNode.addChild(
+			new VariableAssignmentASTNode(
+				null, 
+				lvalue, 
+				new ArrayAccessExpressionNode(null, fakeToken, node.getArrayExpression(), counterExpr)
+			)
+		);
+				
+		CompoundStatementASTNode loopBody = new CompoundStatementASTNode(null);
+		loopBody.addChild(
+			counterDeclNode
+		);
+		loopBody.addChildren(
+			node.getBody().getChildren()
+		);
+		
+		return new ForInRangeStatementASTNode(
+			null,
+			forCounter,
+			new IntegerValueExpressionNode(null, fakeToken, 1),
+			new PropertyAccessExpressionNode(
+				null, 
+				fakeToken, 
+				node.getArrayExpression(), 
+				new Token(node.getLineNumber(), node.getLineOffset(), TokenType.IDENTIFIER, "length")
+			),
+			node.isReversed(),
+			loopBody
+		).accept(this, ctx);
 	}
 
 	@Override
@@ -922,7 +1042,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			
 			VarType argType = arg.getExpressionType();
 			
-			String typeDescriptor = getJVMTypeDescriptor(argType);
+			String typeDescriptor = getMangledTypeName(argType);
 			
 			instructions.add(getStdoutInstr);
 			instructions.addAll(computeArgInstructions);
