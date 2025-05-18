@@ -101,6 +101,29 @@ public class DFALexer implements Lexer {
 									reader.toNextChar();
 									++lineOffset;
 								}
+							} else if (ch2 == '*') {
+								jumpOpState = false;
+								
+								boolean multilineCommentEnded = false;
+								
+								while (!reader.isEndReached() && !multilineCommentEnded) {
+									while (!reader.isEndReached() && reader.lookupChar() != '*') {
+										if (reader.nextChar() == '\n') {
+											++lineNumber;
+											lineOffset = 0;
+										} else
+											++lineOffset;
+									}
+									
+									if (!reader.isEndReached()) {
+										reader.toNextChar();
+										
+										if (reader.lookupChar() == '/') {
+											reader.nextChar();
+											multilineCommentEnded = true;
+										}
+									}
+								}
 							}
 						} else if (ch == '.') {
 							char ch2 = reader.lookupChar();
