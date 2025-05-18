@@ -66,7 +66,12 @@ public class CFGASTVisitor extends AbstractASTVisitor {
             }
 
             for (Map.Entry<ASTNode, ArrayList<ASTNode>> en : reverseCfg.entrySet()) {
+                ASTNode key = en.getKey();
                 ArrayList<ASTNode> val = en.getValue();
+
+                if (key instanceof ReturnStatementASTNode) {
+                    continue;
+                }
 
                 if (val != null && !val.isEmpty()) {
                     continue;
@@ -202,6 +207,11 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(VariableDeclarationASTNode node, SemanticContext ctx) {
+        if (cfg == null) {
+            // Not in routine
+            return ctx;
+        }
+        
         cfg.put(node, parents);
 
         parents = new ArrayList<>();
@@ -212,6 +222,11 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(VariableAssignmentASTNode node, SemanticContext ctx) {
+        if (cfg == null) {
+            // Not in routine
+            return ctx;
+        }
+
         cfg.put(node, parents);
 
         parents = new ArrayList<>();
