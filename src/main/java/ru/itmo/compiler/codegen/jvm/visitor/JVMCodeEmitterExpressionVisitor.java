@@ -40,20 +40,23 @@ import ru.itmo.icompiler.syntax.ast.expression.VariableExpressionNode;
 
 public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<List<JVMBytecodeEntity>, BranchContext> {
 	public static class BranchContext {
+		private Boolean condition;
 		private String thenLabel;
 		private String elseLabel;
 		private LocalVariableContext localVariableContext;
 		private IntCounter labelCounter;
 		
-		public BranchContext(String thenLabel, String elseLabel, LocalVariableContext localVariableContext, IntCounter labelCounter) {
+		public BranchContext(Boolean condition, String thenLabel, String elseLabel, LocalVariableContext localVariableContext, IntCounter labelCounter) {
+			this.condition = condition;
 			this.thenLabel = thenLabel;
 			this.elseLabel = elseLabel;
 			this.localVariableContext = localVariableContext;
 			this.labelCounter = labelCounter;
 		}
 		
-		public BranchContext copy(String thenLabel, String elseLabel) {
+		public BranchContext copy(Boolean condition, String thenLabel, String elseLabel) {
 			return new BranchContext(
+						condition,
 						thenLabel, 
 						elseLabel, 
 						localVariableContext, 
@@ -138,12 +141,66 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		}
 	}
 	
+	public static List<JVMBytecodeEntity> generateBooleanValueInstructions(BranchContext ctx) {
+		if (ctx == null || ctx.condition == null)
+			return Collections.emptyList();
+		
+		String thenLabel = ctx.thenLabel;
+		
+		if (thenLabel == null) {
+			thenLabel = "L" + ctx.labelCounter;
+			ctx.labelCounter.incCounter();
+		}
+		
+		String elseLabel = ctx.elseLabel;
+		
+		if (elseLabel == null) {
+			elseLabel = "L" + ctx.labelCounter;
+			ctx.labelCounter.incCounter();
+		}
+		
+		String endLabel = "L" + ctx.labelCounter;
+		ctx.labelCounter.incCounter();
+		
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		instructions.add(
+			ctx.condition
+			? new JVMBytecodeInstruction("ifne", thenLabel)
+			: new JVMBytecodeInstruction("ifeq", elseLabel)
+		);
+		
+		if (ctx.thenLabel == null) {
+			instructions.addAll(
+				Arrays.asList(
+					new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1"),
+					new JVMBytecodeInstruction("goto", endLabel)
+				)
+			);
+		}
+		
+		if (ctx.elseLabel == null) {
+			instructions.add(
+				new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0")
+			);
+		}
+		
+		instructions.add(
+			new JVMBytecodeLabel(endLabel)
+		);
+		
+		return instructions;
+	}
+	
 	@Override
 	public List<JVMBytecodeEntity> visit(BooleanValueExpressionNode node, BranchContext ctx) {
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		
 		instructions.add(
 			new JVMBytecodeInstruction("iconst_" + (node.getValue() ? 1 : 0)) 
+		);
+		
+		instructions.addAll(
+			generateBooleanValueInstructions(ctx)
 		);
 		
 		return instructions;
@@ -166,7 +223,21 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		String varName = node.getVariable();
 		VarType varType = node.getExpressionType();
 		
-		return Arrays.asList(getLoadVariableInstr(varName, varType, ctx.localVariableContext));
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		
+		instructions.addAll(
+			Arrays.asList(
+				getLoadVariableInstr(varName, varType, ctx.localVariableContext)
+			)
+		);
+		
+		if (varType == VarType.BOOLEAN_PRIMITIVE_TYPE) {
+			instructions.addAll(
+				generateBooleanValueInstructions(ctx)
+			);
+		}
+		
+		return instructions;
 	}
 
 	@Override
@@ -187,7 +258,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 			ExpressionASTNode arg = (ExpressionASTNode) child;
 			
 			instructions.addAll(
-				arg.accept(this, ctx)
+				arg.accept(this, ctx.copy(null, null, null))
 			);
 			
 			sb.append(JVMCodeEmitterVisitor.getMangledTypeName(arg.getExpressionType()));
@@ -199,6 +270,12 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		instructions.add(
 			new JVMBytecodeInstruction("invokestatic", sb.toString())
 		);
+		
+		if (routineType.getReturnType() == VarType.BOOLEAN_PRIMITIVE_TYPE) {
+			instructions.addAll(
+				generateBooleanValueInstructions(ctx)
+			);
+		}
 		
 		return instructions;
 	}
@@ -214,35 +291,58 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		switch (unopType) {
 			case PLUS_BINOP:
 			case MINUS_BINOP:
-				instructions.addAll(unopValue.accept(this, ctx));
+				instructions.addAll(unopValue.accept(this, ctx.copy(null, null, null)));
 				
 				if (unopType == UnaryOperatorType.MINUS_BINOP)
 					instructions.add(new JVMBytecodeInstruction(JVMBytecodeUtils.getOpcodePrefix(unopValue.getExpressionType()) + "neg"));
 					
 				break;
 			case NOT_BINOP: {
-				String thenLabel = "L" + ctx.labelCounter;
-				ctx.labelCounter.incCounter();
+				String thenLabel = ctx.thenLabel;
 				
-				String elseLabel = "L" + ctx.labelCounter;
-				ctx.labelCounter.incCounter();
+				if (thenLabel == null) {
+					thenLabel = "L" + ctx.labelCounter;
+					ctx.labelCounter.incCounter();
+				}
+				
+				String elseLabel = ctx.elseLabel;
+				
+				if (elseLabel == null) {
+					elseLabel = "L" + ctx.labelCounter;
+					ctx.labelCounter.incCounter();
+				}
 				
 				instructions.addAll(
-					node.getValue().accept(this, ctx)
+					node.getValue().accept(this, ctx.copy(
+								ctx.condition != null ? !ctx.condition : true, 
+								elseLabel, 
+								thenLabel
+							))
 				);
 				
 				String endLabel = "L" + ctx.labelCounter;
 				ctx.labelCounter.incCounter();
 				
-				instructions.addAll(
-					Arrays.asList(
-						new JVMBytecodeInstruction("ifeq", elseLabel),
-						new JVMBytecodeInstructionLabeled(thenLabel, "iconst_0"),
-						new JVMBytecodeInstruction("goto", endLabel),
-						new JVMBytecodeInstructionLabeled(elseLabel, "iconst_1"),
-						new JVMBytecodeLabel(endLabel)
-					)
+				if (ctx.thenLabel == null) {
+					instructions.addAll(
+						Arrays.asList(
+							new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1"),
+							new JVMBytecodeInstruction("goto", endLabel)
+						)
+					);
+				}
+				
+				if (ctx.elseLabel == null) {
+					instructions.add(
+						new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0")
+					);
+				}
+				
+				instructions.add(
+					new JVMBytecodeLabel(endLabel)
 				);
+				
+				break;
 			}
 		}
 		
@@ -250,8 +350,14 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 	}
 	
 	private List<JVMBytecodeInstruction> emitIntegerComparisonOpConditionalInstrs(BinaryOperatorType binopType, BranchContext ctx) {
+		boolean condition = ctx.condition != null ? ctx.condition : false;
+		String label = condition ? ctx.thenLabel : ctx.elseLabel;
+		
+		if (!condition)
+			binopType = REVERSED_BINOP_TYPE_MAPPER.get(binopType);
+		
 		return Arrays.asList(
-					new JVMBytecodeInstruction(INTEGER_COMPARISON_OPCODE_MAPPER.get(REVERSED_BINOP_TYPE_MAPPER.get(binopType)), ctx.elseLabel)
+					new JVMBytecodeInstruction(INTEGER_COMPARISON_OPCODE_MAPPER.get(binopType), label)
 				);
 	}
 	
@@ -268,8 +374,14 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 				break;
 		}
 		
+		boolean condition = ctx.condition != null ? ctx.condition : false;
+		String label = condition ? ctx.thenLabel : ctx.elseLabel;
+		
+		if (!condition)
+			binopType = REVERSED_BINOP_TYPE_MAPPER.get(binopType);
+		
 		instructions.add(
-			new JVMBytecodeInstruction(REAL_COMPARISON_OPCODE_MAPPER.get(REVERSED_BINOP_TYPE_MAPPER.get(binopType)), ctx.elseLabel)
+			new JVMBytecodeInstruction(REAL_COMPARISON_OPCODE_MAPPER.get(binopType), label)
 		);
 		
 		return instructions;
@@ -298,21 +410,22 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		ctx.labelCounter.incCounter();
 		
 		BranchContext leftOpCtx = ctx.copy(
-				isORBinop ? thenLabel: rightOperandLabel,
+				isORBinop,
+				isORBinop ? thenLabel : rightOperandLabel,
 				isORBinop ? rightOperandLabel : elseLabel
 			);
 		
 		instructions.addAll(
 			node.getLeftChild().accept(this, leftOpCtx)
 		);
-		instructions.add(
-			isORBinop 
-			? new JVMBytecodeInstruction("ifne", thenLabel)
-			: new JVMBytecodeInstruction("ifeq", elseLabel)
-		);
+//		instructions.add(
+//			isORBinop 
+//			? new JVMBytecodeInstruction("ifne", thenLabel)
+//			: new JVMBytecodeInstruction("ifeq", elseLabel)
+//		);
 		instructions.add(new JVMBytecodeLabel(rightOperandLabel));
 		instructions.addAll(
-			node.getRightChild().accept(this, ctx)
+			node.getRightChild().accept(this, ctx.copy(ctx.condition != null ? ctx.condition : false, thenLabel, elseLabel))
 		);
 		
 		String endLabel = "L" + ctx.labelCounter;
@@ -346,35 +459,56 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		instructions.addAll(node.getLeftChild().accept(this, ctx));
 		instructions.addAll(node.getRightChild().accept(this, ctx));
 		
-		String thenLabel = "L" + ctx.labelCounter;
-		ctx.labelCounter.incCounter();
+		String thenLabel = ctx.thenLabel;
 		
-		String elseLabel = "L" + ctx.labelCounter;
-		ctx.labelCounter.incCounter();
+		if (thenLabel == null) {
+			thenLabel = "L" + ctx.labelCounter;
+			ctx.labelCounter.incCounter();
+		}
 		
-		BranchContext subctx = ctx.copy(thenLabel, elseLabel);
+		String elseLabel = ctx.elseLabel;
+		
+		if (elseLabel == null) {
+			elseLabel = "L" + ctx.labelCounter;
+			ctx.labelCounter.incCounter();
+		}
+		
+		BranchContext subctx = ctx.copy(ctx.condition, thenLabel, elseLabel);
 		
 		if (node.getLeftChild().getExpressionType() == VarType.INTEGER_PRIMITIVE_TYPE)
 			instructions.addAll(emitIntegerComparisonOpConditionalInstrs(node.getBinaryOperatorType(), subctx));
 		else
 			instructions.addAll(emitRealComparisonOpConditionalInstrs(node.getBinaryOperatorType(), subctx));
 		
-		String endLabel = "L" + ctx.labelCounter;
-		ctx.labelCounter.incCounter();
+		String endLabel = null;
+		if (ctx.thenLabel == null || ctx.elseLabel == null) {
+			endLabel = "L" + ctx.labelCounter;
+			ctx.labelCounter.incCounter();
+		}
 		
-		instructions.addAll(
-			Arrays.asList(
-				new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1"),
-				new JVMBytecodeInstruction("goto", endLabel)
-			)
-		);
+		if (ctx.thenLabel == null) {
+			instructions.add(
+				new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1")
+			);
+			
+			if (endLabel != null) {
+				instructions.add(
+					new JVMBytecodeInstruction("goto", endLabel)
+				);
+			}
+		}
 		
-		instructions.addAll(
-			Arrays.asList(
-					new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0"),
-					new JVMBytecodeLabel(endLabel)
-				)
-		);
+		if (ctx.elseLabel == null) {
+			instructions.add(
+				new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0")
+			);
+		}
+		
+		if (endLabel != null) {
+			instructions.add(
+				new JVMBytecodeLabel(endLabel)
+			);
+		}
 		
 		return instructions;
 	}
@@ -387,20 +521,24 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		
 		String opcode = BINOP_OPCODE_MAPPER.get(binop);
 		
-//		if (binop == BinaryOperatorType.AND_BINOP || binop == BinaryOperatorType.OR_BINOP)
-//			return emitSCEJVMCode(node, ctx);
-		
-		if (opcode == null)
+		if (binop == BinaryOperatorType.AND_BINOP || binop == BinaryOperatorType.OR_BINOP)
+			return emitSCEJVMCode(node, ctx);
+		else if (INTEGER_COMPARISON_OPCODE_MAPPER.keySet().contains(binop))
 			return emitComparisonOpCode(node, ctx);
 		
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
-		instructions.addAll(node.getLeftChild().accept(this, ctx));
-		instructions.addAll(node.getRightChild().accept(this, ctx));
+		instructions.addAll(node.getLeftChild().accept(this, ctx.copy(null, null, null)));
+		instructions.addAll(node.getRightChild().accept(this, ctx.copy(null, null, null)));
 		
+//		instructions.add(
+//			binop == BinaryOperatorType.AND_BINOP || binop == BinaryOperatorType.OR_BINOP
+//			? new JVMBytecodeInstruction(opcode)
+//			: new JVMBytecodeInstruction(instrPrefix + opcode)
+//		);
+		
+
 		instructions.add(
-			binop == BinaryOperatorType.AND_BINOP || binop == BinaryOperatorType.OR_BINOP
-			? new JVMBytecodeInstruction(opcode)
-			: new JVMBytecodeInstruction(instrPrefix + opcode)
+			new JVMBytecodeInstruction(instrPrefix + opcode)
 		);
 		
 		return instructions;
@@ -411,10 +549,10 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		
 		instructions.addAll(
-			node.getHolder().accept(this, ctx)
+			node.getHolder().accept(this, ctx.copy(null, null, null))
 		);
 		instructions.addAll(
-			node.getIndex().accept(this, ctx)
+			node.getIndex().accept(this, ctx.copy(null, null, null))
 		);
 		instructions.addAll(
 			Arrays.asList(
@@ -444,8 +582,8 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		String prop = node.getPropertyName();
 		
 		instructions.addAll(
-				holder.accept(this, ctx)
-			);
+			holder.accept(this, ctx.copy(null, null, null))
+		);
 		
 		if (holderType.getTag() == Tag.ARRAY && "length".equals(prop)) {
 			instructions.add(new JVMBytecodeInstruction("arraylength"));
@@ -484,7 +622,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		VarType actualCastExprType = castExpr.getExpressionType();
 		
 		if (targetType.equals(actualCastExprType))
-			return castExpr.accept(this, ctx);
+			return castExpr.accept(this, ctx.copy(null, null, null));
 		
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		
@@ -492,44 +630,53 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 				&& (castExpr.getExpressionNodeType() == ExpressionNodeType.UNOP_EXPR_NODE 
 				|| castExpr.getExpressionNodeType() == ExpressionNodeType.BINOP_EXPR_NODE
 			)) {
-			String thenLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-			
-			String elseLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-			
-			instructions.addAll(
-				castExpr.accept(this, ctx.copy(thenLabel, elseLabel))
-			);
-			instructions.add(
-				new JVMBytecodeInstruction("ifeq", elseLabel)
-			);
-			
-			String endLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
+//			String thenLabel = "L" + ctx.labelCounter;
+//			ctx.labelCounter.incCounter();
+//			
+//			String elseLabel = "L" + ctx.labelCounter;
+//			ctx.labelCounter.incCounter();
 			
 			instructions.addAll(
-				Arrays.asList(
-					new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1"),
-					new JVMBytecodeInstruction("goto", endLabel)
-				)
+				castExpr.accept(this, ctx.copy(null, null, null))
 			);
-			
 			instructions.addAll(
-				Arrays.asList(
-						new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0"),
-						new JVMBytecodeLabel(endLabel)
-					)
+				generateBooleanValueInstructions(ctx.copy(false, null, null))
 			);
+//			instructions.add(
+//				new JVMBytecodeInstruction("ifeq", elseLabel)
+//			);
+//			
+//			String endLabel = "L" + ctx.labelCounter;
+//			ctx.labelCounter.incCounter();
+//			
+//			instructions.addAll(
+//				Arrays.asList(
+//					new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1"),
+//					new JVMBytecodeInstruction("goto", endLabel)
+//				)
+//			);
+//			
+//			instructions.addAll(
+//				Arrays.asList(
+//						new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0"),
+//						new JVMBytecodeLabel(endLabel)
+//					)
+//			);
 		} else {
 			instructions.addAll(
-				castExpr.accept(this, ctx)
+				castExpr.accept(this, ctx.copy(null, null, null))
 			);
 		}
 	
 		if (actualCastExprType == VarType.INTEGER_PRIMITIVE_TYPE && targetType == VarType.REAL_PRIMITIVE_TYPE)
 			instructions.add(new JVMBytecodeInstruction("i2f"));
 		else if (actualCastExprType == VarType.INTEGER_PRIMITIVE_TYPE && targetType == VarType.BOOLEAN_PRIMITIVE_TYPE) {
+//			String thenLabel = "L" + ctx.labelCounter;
+//			ctx.labelCounter.incCounter();
+//			
+//			String elseLabel = "L" + ctx.labelCounter;
+//			ctx.labelCounter.incCounter();
+			
 			String afterCheckLabel = "L" + ctx.labelCounter;
 			ctx.labelCounter.incCounter();
 			
@@ -540,7 +687,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 					
 					new JVMBytecodeInstruction("dup"),
 					new JVMBytecodeInstruction("iconst_1"),
-					new JVMBytecodeInstruction("if_icmple", afterCheckLabel),
+					new JVMBytecodeInstruction("if_icmpeq", afterCheckLabel),
 					
 					new JVMBytecodeInstruction("new", "java/lang/RuntimeException"),
 					new JVMBytecodeInstruction("dup"),
@@ -548,19 +695,20 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 					new JVMBytecodeInstruction("invokespecial", "java/lang/RuntimeException/<init>(Ljava/lang/String;)V"),
 					new JVMBytecodeInstruction("athrow"),
 					
-					new JVMBytecodeLabel(afterCheckLabel)
+					new JVMBytecodeLabel(afterCheckLabel) 
 				)
 			);
+			
+			if (ctx.thenLabel != null && ctx.elseLabel != null) {
+				instructions.addAll(
+					generateBooleanValueInstructions(ctx)
+				);	
+			}
 		}
 		else if (actualCastExprType == VarType.BOOLEAN_PRIMITIVE_TYPE && targetType == VarType.REAL_PRIMITIVE_TYPE)
 			instructions.add(new JVMBytecodeInstruction("i2f"));
 		else if (actualCastExprType == VarType.REAL_PRIMITIVE_TYPE && targetType == VarType.INTEGER_PRIMITIVE_TYPE)
 			instructions.add(new JVMBytecodeInstruction("f2i"));
-		else if (actualCastExprType.getTag() == VarType.Tag.ARRAY && !(targetType instanceof SizedArrayType)) {
-//			instructions.addAll();
-			
-			System.out.println("DEBUG IMPLICIT CAST: " + instructions);
-		}
 		
 		return instructions;
 	}
