@@ -33,8 +33,8 @@ import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 	private List<ASTNode> detachingCandidates;
 	
-	public TypealiasResolverASTVisitor(AbstractExpressionASTVisitor expressionisitor) {
-		super(expressionisitor);
+	public TypealiasResolverASTVisitor(AbstractExpressionASTVisitor expressionVisitor) {
+		super(expressionVisitor);
 		
 		detachingCandidates = new ArrayList<>();
 	}

@@ -41,8 +41,8 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 	private FunctionType currentRoutineType;
 	private boolean loopProcessing;
 	
-	public SimpleASTVisitor(AbstractExpressionASTVisitor expressionisitor) {
-		super(expressionisitor);
+	public SimpleASTVisitor(AbstractExpressionASTVisitor expressionVisitor) {
+		super(expressionVisitor);
 	}
 	
 	private void tryAddVariableToScope(VariableDeclarationASTNode node, SemanticContext ctx, boolean reportRedefintion) {
