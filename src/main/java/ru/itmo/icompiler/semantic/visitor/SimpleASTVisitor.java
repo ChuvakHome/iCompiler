@@ -13,6 +13,7 @@ import ru.itmo.icompiler.semantic.SemanticContext.Scope;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.exception.EntityRedefinitionSemanticException;
+import ru.itmo.icompiler.semantic.exception.ImmutableLeftPartSemanticExceptionImpl;
 import ru.itmo.icompiler.semantic.exception.LoopStatementOutsideLoopSemanticException;
 import ru.itmo.icompiler.semantic.exception.NonAssignableLeftPartSemanticException;
 import ru.itmo.icompiler.semantic.exception.NonIterableInForEachSemanticException;
@@ -37,7 +38,10 @@ import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ImplicitCastExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.PropertyAccessExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.VariableExpressionNode;
 import ru.itmo.icompiler.syntax.exception.VariableDeclWithoutTypeSyntaxException;
+
+import static ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode.ExpressionNodeType.VARIABLE_EXPR_NODE;
 
 public class SimpleASTVisitor extends AbstractASTVisitor {
 	private FunctionType currentRoutineType;
@@ -131,7 +135,10 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 				} else {
 					visitAssigmentLite(assignNode, new SemanticContext(
 								ctx.getCompilerErrors(),
-								new Scope(ctx.getScope(), Map.of(varName, varType))
+								new Scope(
+									ctx.getScope(),
+									Map.of(varName, varType)
+								)
 							), ctx);
 					
 					tryAddVariableToScope(node, ctx, true);
@@ -179,6 +186,10 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			checkPrimaryAssignable(lhs);
 			
 			VarType leftType = lhs.inferType(lhsCtx);
+			if (lhs.getExpressionNodeType() == VARIABLE_EXPR_NODE
+					&& lhsCtx.getScope().isEntityImmutable(((VariableExpressionNode) lhs).getVariable())) {
+				throw new ImmutableLeftPartSemanticExceptionImpl(lhs.getStartToken().lineNumber, lhs.getStartToken().lineOffset);
+			}
 
 			rhs.checkType(ctx, leftType);
 			rhs.accept(this, ctx);
@@ -263,7 +274,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		FunctionType funcType = parseRoutineTypeFromDecl(node.getRoutineDeclaration(), ctx);
 		routines.put(node.getRoutineDeclaration().getRoutineName(), funcType);
 		
-		Scope subscope = new Scope(ctx.getScope(), funcType.getArgumentsTypes(), new HashMap<>());
+		Scope subscope = new Scope(ctx.getScope(), funcType.getArgumentsTypes());
 		
 		currentRoutineType = funcType;
 		
@@ -353,8 +364,13 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		openScope();
 		
 		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
+
+		Scope subscope = new Scope(
+				ctx.getScope(),
+				Map.of(),
+				Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE)
+		);
 		
-		Scope subscope = new Scope(ctx.getScope(), Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE));
 		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), subscope));
 		closeScope();
 		
@@ -374,9 +390,11 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			if (iterEntityType.getTag() == VarType.Tag.ARRAY) {
 				ArrayType iterArray = (ArrayType) iterEntityType;
 				
-				Scope subscope = new Scope(ctx.getScope(), Map.of(
-							node.getIterVariable(), iterArray.getElementType()
-						));
+				Scope subscope = new Scope(
+						ctx.getScope(),
+						Map.of(),
+						Map.of(node.getIterVariable(), iterArray.getElementType())
+				);
 				
 				bodyCtx = new SemanticContext(ctx.getCompilerErrors(), subscope);
 			} else
