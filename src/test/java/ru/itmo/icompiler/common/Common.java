@@ -1,5 +1,6 @@
 package ru.itmo.icompiler.common;
 
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.provider.Arguments;
 
 import java.io.IOException;
@@ -13,13 +14,6 @@ public class Common {
         Path resourceDir = Paths.get(testsPath);
         return Files.list(resourceDir)
                 .filter(Files::isRegularFile)
-                .map(path -> {
-                    try {
-                        String content = Files.readString(path);
-                        return Arguments.of(path.getFileName().toString(), content);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                .map(path -> Arguments.of(Named.of(path.getFileName().toString(), path)));
     }
 }

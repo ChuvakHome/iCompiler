@@ -33,7 +33,11 @@ import ru.itmo.icompiler.syntax.exception.UnexpectedTokenSyntaxException.Unexpec
 public class ICompiler {
 	private String sourceName = "<source>";
 	private String[] sourceLines;
-	
+
+	public List<CompilerException> getCompilerErrors() {
+		return compilerErrors;
+	}
+
 	private List<CompilerException> compilerErrors = new ArrayList<>();
 	
 	private ASTNode parseResult;
