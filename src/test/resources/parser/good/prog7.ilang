@@ -1,0 +1,32 @@
+routine fib(arr : array[] integer) is
+  var prev is 0
+  var cur is 1
+  for i in 1..arr.length 
+  loop
+    arr[i] := cur
+    var tmp is prev
+    prev := cur
+    cur := tmp + cur
+  end
+end
+
+routine main() is
+  var arr : array[10] integer
+  fib(arr)
+  for a in arr
+  loop
+    print a
+  end
+  for a in arr reverse
+  loop
+    if a % 2 = 0 then
+      print a
+    end
+  end
+  var i is 1
+  while i <= 10 and arr[i] < 10
+  loop
+    i := i + 1
+  end
+  print i
+end

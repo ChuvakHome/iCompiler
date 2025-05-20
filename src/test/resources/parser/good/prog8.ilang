@@ -1,0 +1,33 @@
+routine is_sorted(arr : array[] integer) : boolean is
+  var result is true
+  for i in 1..arr.length - 1
+  loop
+    result := result and (arr[i] <= arr[i+1])
+  end
+  return result
+end
+
+routine bubble_sort(arr : array[] integer) is
+  while not is_sorted(arr) loop
+    for i in 1..arr.length - 1
+    loop
+      if arr[i] > arr[i+1]
+      then
+        var tmp is arr[i]
+        arr[i] := arr[i+1]
+        arr[i+1] := tmp
+      end
+    end
+  end
+end
+
+routine main() is
+  var arr : array[5] integer
+  arr[1] := 2
+  arr[2] := 2
+  arr[3] := 5
+  arr[4] := 1
+  arr[5] := 3
+  bubble_sort(arr)
+  print (arr[1] = 1) and (arr[2] = 2) and (arr[3] = 2) and (arr[4] = 3) and (arr[5] = 5)
+end

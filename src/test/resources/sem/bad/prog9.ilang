@@ -1,0 +1,4 @@
+routine main() is
+  var size : integer is 42
+  var a : array[size] integer
+end

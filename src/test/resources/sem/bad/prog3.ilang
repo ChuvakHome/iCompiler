@@ -1,0 +1,6 @@
+routine main(x: integer, y, flag: boolean) is
+  var retval is 42
+
+  print retval
+end
+

@@ -1,0 +1,23 @@
+
+type Point is record
+	var x: integer
+	var y: integer
+end
+
+routine f() is
+  var x: boolean
+  x := 1
+  
+  if true then
+  	var x is 42.
+  	x := 5.
+  
+  	print x
+  end
+  
+  x := true + 5
+  x := false + 42.
+  
+  var p: Point
+  p.x := 0
+end

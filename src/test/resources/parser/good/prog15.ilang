@@ -1,0 +1,30 @@
+routine main() is
+  var x is 2
+  var pi is 3.14
+  var True is true
+  var False is false
+
+  var intFromInt is x; print x, intFromInt
+  intFromInt := 42; print x, intFromInt
+
+  var intFromReal : integer is pi; print intFromReal
+  var zeroFromBool : integer is False; print zeroFromBool
+  var oneFromBool : integer is True; print oneFromBool
+
+
+  var realFromReal is pi; print pi, realFromReal
+  realFromReal := 2.71; print pi, realFromReal
+
+  var realFromInt : real is x; print realFromInt
+  var realZeroFromBool : real is False; print realZeroFromBool
+  var realOneFromBool : real is True; print realOneFromBool
+  
+
+  var boolFromBool is False; print False, boolFromBool
+  boolFromBool := True; print False, boolFromBool
+  
+  var falseFromInt : boolean is 0; print falseFromInt
+  var trueFromBool : boolean is not 0; print trueFromBool
+  var errorCast : boolean is x;
+
+end

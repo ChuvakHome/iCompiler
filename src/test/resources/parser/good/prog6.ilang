@@ -1,0 +1,18 @@
+type Foo is integer
+type Bar is boolean
+type God is real
+type EmptyRecord is record end
+type SomeRecord is record
+  var foo : Foo
+  var bar : Bar is true
+  var god is 3.14
+end
+type SimpleArray is array[1] Foo
+
+var foo : Foo is 1
+var bar : Bar is false
+var empty : EmptyRecord
+var some : SomeRecord
+var arr : SimpleArray
+
+routine test(complexArray : array[] SomeRecord) is end

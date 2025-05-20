@@ -1,0 +1,79 @@
+routine main is
+  var retval is 42
+
+  print retval
+end
+
+routine gg(x: integer)
+
+type double is real
+
+routine g(x: integer, flag: boolean, x: double)
+
+type int is integer
+
+type bool is boolean
+
+type Boolean is bool
+
+routine double(x: integer, y: integer) is
+	var s is ffff(1, true, 2.)
+
+	print 1
+end
+
+routine f() is
+  var x is 15 30
+  
+  var b: boolean;
+  var i: integer;
+  var r: real;
+  
+  var test: int
+  ggff(test)
+  test(0)
+  
+  double(42, 38)
+  
+  var flag: Boolean
+  flag := 42.
+  
+  if i then
+  	var y is g(1, false)
+  	
+  	b : = true
+  	b := 1
+  	b := 1.
+  	
+  	i := true
+  	i := 1
+  	i := 1.
+  	
+  	r := true
+  	r := 1
+  	r := 1.
+  	
+  	print 1
+  	
+  	t.x := 4
+  	
+  	type rec is record var x: integer end
+  	
+  	var new_rec: rec
+  	var arr: array[10] integer
+  	
+  	print new_rec.length, r.length, not 4
+  	
+  	break
+  end
+end
+
+type int is boolean
+
+routine h(x: integer): integer
+
+routine h(x: integer, flag: boolean): integer
+
+routine h(x: integer, y: real): integer is 
+
+end

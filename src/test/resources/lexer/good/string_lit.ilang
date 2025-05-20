@@ -1,0 +1,3 @@
+routine main() is
+  var str is "std::string s = \"Hello world!\";"
+end

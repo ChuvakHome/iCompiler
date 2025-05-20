@@ -9,11 +9,15 @@ import ru.itmo.compiler.reader.TextReader;
 import ru.itmo.icompiler.lex.Token.TokenType;
 
 public class DFALexer implements Lexer {
+	public static final int DEFAULT_TAB_SIZE = 4;
+	
 	private static enum DFALexerState {
 		INIT_STATE,
 		STRING_OR_IDENTIFIER_STATE,
 		NUMERIC_LITERAL_STATE,
 		REAL_NUMERIC_LITERAL_STATE,
+		STRING_LITERAL_STATE,
+		WHITESPACE_STATE,
 		OPERATOR_STATE,
 		TERMINAL_STATE,
 	}
@@ -37,10 +41,10 @@ public class DFALexer implements Lexer {
 	
 	@Override
 	public Token lookupToken(Predicate<Token> p) {
-		while (currentToken == null || !p.test(currentToken))
+		while (!isEndReached() && (currentToken == null || !p.test(currentToken)))
 			currentToken = doLookupToken();
 		
-		return currentToken;
+		return isEndReached() ? new Token(lineNumber, lineOffset, TokenType.END_OF_TEXT, "") : currentToken;
 	}
 	
 	@Override
@@ -56,7 +60,7 @@ public class DFALexer implements Lexer {
 		
 		state = DFALexerState.INIT_STATE;
 		
-		while (!reader.isEndReached() && state != DFALexerState.TERMINAL_STATE) {
+		while (!reader.isEndReached() && state != DFALexerState.TERMINAL_STATE) {			
 			switch (state) {
 				case INIT_STATE: {
 					char ch = reader.nextChar();
@@ -80,14 +84,11 @@ public class DFALexer implements Lexer {
 										TokenType.LINE_FEED_DELIMITER,
 										"\n"
 									);
-					} else if (Character.isWhitespace(ch)) {
-						return new Token(
-										lineNumber,
-										lineOffset,
-										TokenType.WHITESPACE,
-										String.valueOf(ch)
-									);
-					} else {
+					} else if (ch == '"')
+						state = DFALexerState.STRING_LITERAL_STATE;
+					else if (Character.isWhitespace(ch))
+						state = DFALexerState.WHITESPACE_STATE;
+					else {
 						boolean jumpOpState = true;
 						
 						if (ch == '/') {
@@ -100,12 +101,34 @@ public class DFALexer implements Lexer {
 									reader.toNextChar();
 									++lineOffset;
 								}
+							} else if (ch2 == '*') {
+								jumpOpState = false;
+								
+								boolean multilineCommentEnded = false;
+								
+								while (!reader.isEndReached() && !multilineCommentEnded) {
+									while (!reader.isEndReached() && reader.lookupChar() != '*') {
+										if (reader.nextChar() == '\n') {
+											++lineNumber;
+											lineOffset = 0;
+										} else
+											++lineOffset;
+									}
+									
+									if (!reader.isEndReached()) {
+										reader.toNextChar();
+										
+										if (reader.lookupChar() == '/') {
+											reader.nextChar();
+											multilineCommentEnded = true;
+										}
+									}
+								}
 							}
 						} else if (ch == '.') {
 							char ch2 = reader.lookupChar();
 							
 							if (Character.isDigit(ch2)) {
-//								tokenTextSB.append('0');
 								state = DFALexerState.REAL_NUMERIC_LITERAL_STATE;
 								
 								jumpOpState = false;
@@ -120,7 +143,7 @@ public class DFALexer implements Lexer {
 						startLineNumber = lineNumber;
 						startLineOffset = lineOffset;
 						
-						tokenTextSB.append(ch);
+						tokenTextSB.append(ch == '\t' ? LexUtils.tabToSpaces(DEFAULT_TAB_SIZE) : ch);
 					}
 					
 					break;
@@ -181,6 +204,42 @@ public class DFALexer implements Lexer {
 					}
 					
 					break;
+				} case STRING_LITERAL_STATE: {
+					char ch = reader.nextChar();
+					
+					if (ch == '\\') {
+						char escapedSymbol = reader.nextChar();
+						
+						if (escapedSymbol != 0) {
+							tokenTextSB.append('\\').append(escapedSymbol);
+							++lineOffset;
+						}
+					} else {
+						if (ch == '"') {
+							state = DFALexerState.TERMINAL_STATE;
+							tokType = TokenType.STRING_LITERAL;
+						}
+						
+						tokenTextSB.append(ch);
+					}
+					
+					++lineOffset;
+					
+					break;
+				} case WHITESPACE_STATE: {
+					char ch = reader.lookupChar();
+					
+					if (isWhitespace(ch)) {
+						tokenTextSB.append(ch == '\t' ? LexUtils.tabToSpaces(DEFAULT_TAB_SIZE) : ch);
+						reader.toNextChar();
+						++lineOffset;
+					}
+					else {
+						state = DFALexerState.TERMINAL_STATE;
+						tokType = TokenType.WHITESPACE;
+					}
+					
+					break;
 				} case OPERATOR_STATE: {
 					char ch = reader.lookupChar();
 					
@@ -237,6 +296,20 @@ public class DFALexer implements Lexer {
 								TokenType.REAL_NUMERIC_LITERAL,
 								tokenTextSB.toString()
 							);
+			case STRING_LITERAL_STATE:
+				return new Token(
+							startLineNumber,
+							startLineOffset,
+							TokenType.STRING_LITERAL,
+							tokenTextSB.toString()
+						);
+			case WHITESPACE_STATE:
+				return new Token(
+							startLineNumber, 
+							startLineOffset,
+							TokenType.WHITESPACE,
+							tokenTextSB.toString()
+						);
 			default:
 				return new Token(
 								lineNumber,
@@ -267,6 +340,10 @@ public class DFALexer implements Lexer {
 	}
 	
 	public boolean isEndReached() {
-		return reader.isEndReached();
+		return (currentToken == null || currentToken.type == TokenType.END_OF_TEXT) && reader.isEndReached();
+	}
+	
+	private static boolean isWhitespace(char ch) {
+		return ch != '\n' && Character.isWhitespace(ch);
 	}
 }

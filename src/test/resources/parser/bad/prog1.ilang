@@ -1,0 +1,9 @@
+routine main is
+  var retval is 42
+
+  print retval
+end
+
+routine f() is
+  var x is 15 30
+end
