@@ -10,6 +10,7 @@ import ru.itmo.icompiler.semantic.exception.DeadCodeSemanticException;
 import ru.itmo.icompiler.semantic.exception.NoReturnSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.CompoundStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -42,6 +43,10 @@ public class CFGASTVisitor extends AbstractASTVisitor {
         parents.add(node.getRoutineDeclaration());
 
         node.getBody().accept(this, ctx);
+
+        if (!parents.isEmpty()) {
+            cfg.put(new CompoundStatementASTNode(null), parents);
+        }
 
         VarType result = node.getRoutineDeclaration().getResultType();
         if (result != VarType.VOID_TYPE) {
@@ -87,6 +92,11 @@ public class CFGASTVisitor extends AbstractASTVisitor {
             ArrayList<ASTNode> val = en.getValue();
 
             if (val != null && !val.isEmpty()) {
+                continue;
+            }
+
+            if (key.getParentNode() == null) {
+                // Ignore pseudo node
                 continue;
             }
 
