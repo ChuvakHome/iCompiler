@@ -17,6 +17,7 @@ import ru.itmo.icompiler.semantic.exception.LoopStatementOutsideLoopSemanticExce
 import ru.itmo.icompiler.semantic.exception.NonAssignableLeftPartSemanticException;
 import ru.itmo.icompiler.semantic.exception.NonIterableInForEachSemanticException;
 import ru.itmo.icompiler.semantic.exception.RoutineDeclarationMismatchSemanticException;
+import ru.itmo.icompiler.semantic.exception.RoutineNotDefinedSemanticException;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.semantic.exception.VariableIsSizelessArraySemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
@@ -25,6 +26,7 @@ import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.PrintStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ProgramASTNode;
 import ru.itmo.icompiler.syntax.ast.ReturnStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.RoutineDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.RoutineDefinitionASTNode;
@@ -39,6 +41,7 @@ import ru.itmo.icompiler.syntax.exception.VariableDeclWithoutTypeSyntaxException
 
 public class SimpleASTVisitor extends AbstractASTVisitor {
 	private FunctionType currentRoutineType;
+	private Map<String, FunctionType> routines;
 	private boolean loopProcessing;
 	
 	public SimpleASTVisitor(AbstractExpressionASTVisitor expressionisitor) {
@@ -67,6 +70,24 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		return ctx;
 	}
 	
+	@Override
+	public SemanticContext visit(ProgramASTNode node, SemanticContext ctx) {
+		routines = new HashMap<>();
+
+		for (ASTNode child: node.getChildren())
+			child.accept(this, ctx);
+		
+		for(Map.Entry<String, FunctionType> entry : routines.entrySet()) {
+			if (entry.getValue() == null) {
+				String routineName = entry.getKey();
+				int[] routineDecl = lookupDefinitionInfo(routineName);
+				ctx.addCompilerError(new RoutineNotDefinedSemanticException(routineName, routineDecl[0], 1));
+			}
+		}
+
+		return ctx;
+	}
+
 	@Override
 	public SemanticContext visit(VariableDeclarationASTNode node, SemanticContext ctx) {
 		String varName = node.getVarName();
@@ -204,11 +225,11 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			String routineName = node.getRoutineName();
 			
-			int[] definition = lookupDefinitionInfo(routineName);
+			VarType definitionType = routines.get(routineName);
 			VarType entityType = ctx.getScope().lookup(routineName);
 
 			boolean isDeclared = entityType != null;
-			boolean isDefined = definition != null;
+			boolean isDefined = definitionType != null;
 			
 			if (isDeclared && isDefined)
 				throw new EntityRedefinitionSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
@@ -221,6 +242,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			} else {
 				addDefinitionInfo(routineName, new int[] { tk.lineNumber });
 				ctx.getScope().addEntity(routineName, funcType);
+				routines.put(routineName, null);
 			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
@@ -234,6 +256,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		visit(node.getRoutineDeclaration(), ctx);
 		
 		FunctionType funcType = parseRoutineTypeFromDecl(node.getRoutineDeclaration(), ctx);
+		routines.put(node.getRoutineDeclaration().getRoutineName(), funcType);
 		
 		Scope subscope = new Scope(ctx.getScope(), funcType.getArgumentsTypes(), new HashMap<>());
 		
