@@ -182,7 +182,8 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		String typename = node.getTypename();
 		VarType newType = node.getType();
 		
-		ctx.getScope().addTypealias(typename, newType);
+		// TODO: Check duplicates
+		ctx.getScope().addEntity(typename, newType);
 		addDefinitionInfo(typename, new int[] { tk.lineNumber });
 		
 		return ctx;
@@ -203,20 +204,23 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			String routineName = node.getRoutineName();
 			
-			FunctionType prevRoutineType = ctx.getScope().lookupRoutine(routineName);
+			int[] definition = lookupDefinitionInfo(routineName);
 			VarType entityType = ctx.getScope().lookup(routineName);
+
+			boolean isDeclared = entityType != null;
+			boolean isDefined = definition != null;
 			
-			if (entityType != null && entityType != prevRoutineType)
+			if (isDeclared && isDefined)
 				throw new EntityRedefinitionSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
 			
-			if (prevRoutineType != null) {
-				if (prevRoutineType.equals(funcType))
+			if (isDeclared) {
+				if (funcType.equals(entityType))
 					addDefinitionInfo(routineName, new int[] { tk.lineNumber });
 				else
 					throw new RoutineDeclarationMismatchSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
 			} else {
 				addDefinitionInfo(routineName, new int[] { tk.lineNumber });
-				ctx.getScope().addRoutine(routineName, funcType);
+				ctx.getScope().addEntity(routineName, funcType);
 			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);

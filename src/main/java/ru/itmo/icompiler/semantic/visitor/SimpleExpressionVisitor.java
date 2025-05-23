@@ -50,7 +50,9 @@ public class SimpleExpressionVisitor extends AbstractExpressionASTVisitor {
 	public SemanticContext visit(RoutineCallExpressionNode node, SemanticContext ctx) {
 		String routineName = node.getRoutineName();
 		
-		FunctionType routineType = ctx.getScope().deepLookupRoutine(routineName);
+		VarType type = ctx.getScope().deepLookup(routineName);
+		// TODO
+		FunctionType routineType = (FunctionType)type;
 		node.setRoutineType(routineType);
 		
 		if (routineType == null)

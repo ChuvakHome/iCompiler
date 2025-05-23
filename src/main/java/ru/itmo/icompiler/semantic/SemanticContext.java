@@ -64,13 +64,13 @@ public class SemanticContext {
 			entities.put(name, type);
 		}
 		
-		public void addRoutine(String name, FunctionType type) {
-			routines.put(name, type);
-		}
+		// public void addRoutine(String name, FunctionType type) {
+		// 	routines.put(name, type);
+		// }
 		
-		public void addTypealias(String name, VarType type) {
-			typealiases.put(name, type);
-		}
+		// public void addTypealias(String name, VarType type) {
+		// 	typealiases.put(name, type);
+		// }
 		
 		public VarType lookupEntity(String entity) {
 			VarType varType = entities.get(entity);
@@ -87,48 +87,48 @@ public class SemanticContext {
 			return parentScope != null ? parentScope.deepLookupEntity(entity) : null;
 		}
 		
-		public FunctionType lookupRoutine(String entity) {
-			FunctionType varType = routines.get(entity);
+		// public FunctionType lookupRoutine(String entity) {
+		// 	FunctionType varType = routines.get(entity);
 			
-			return varType;
-		}
+		// 	return varType;
+		// }
 		
-		public FunctionType deepLookupRoutine(String entity) {
-			FunctionType type = lookupRoutine(entity);
+		// public FunctionType deepLookupRoutine(String entity) {
+		// 	FunctionType type = lookupRoutine(entity);
 			
-			if (type != null)
-				return type;
+		// 	if (type != null)
+		// 		return type;
 			
-			return parentScope != null ? parentScope.deepLookupRoutine(entity) : null;
-		}
+		// 	return parentScope != null ? parentScope.deepLookupRoutine(entity) : null;
+		// }
 		
-		public VarType lookupTypealias(String typename) {
-			VarType varType = typealiases.get(typename);
+		// public VarType lookupTypealias(String typename) {
+		// 	VarType varType = typealiases.get(typename);
 			
-			return varType;
-		}
+		// 	return varType;
+		// }
 		
-		public VarType deepLookupTypealias(String typename) {
-			VarType type = lookupTypealias(typename);
+		// public VarType deepLookupTypealias(String typename) {
+		// 	VarType type = lookupTypealias(typename);
 			
-			if (type != null)
-				return type;
+		// 	if (type != null)
+		// 		return type;
 			
-			return parentScope != null ? parentScope.deepLookupTypealias(typename) : null;
-		}
+		// 	return parentScope != null ? parentScope.deepLookupTypealias(typename) : null;
+		// }
 		
 		public VarType lookup(String name) {
 			VarType t = lookupEntity(name);
 			
-			if (t != null)
-				return t;
+			// if (t != null)
+			// 	return t;
 			
-			t = lookupRoutine(name);
+			// t = lookupRoutine(name);
 			
-			if (t != null)
-				return t;
+			// if (t != null)
+			// 	return t;
 			
-			t = lookupTypealias(name);
+			// t = lookupTypealias(name);
 			
 			return t;
 		}

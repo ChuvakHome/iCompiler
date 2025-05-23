@@ -17,7 +17,7 @@ public class SemUtils {
 		
 		Typealias typealias = (Typealias) providedType;
 		
-		return ctx.getScope().deepLookupTypealias(typealias.getTypename());
+		return ctx.getScope().deepLookup(typealias.getTypename());
 	}
 	
 	public static VarType checkEntity(String entity, SemanticContext ctx, boolean deepSearch, SemanticException e) throws SemanticException {
@@ -32,24 +32,30 @@ public class SemUtils {
 	}
 	
 	public static FunctionType checkRoutine(String entity, SemanticContext ctx, boolean deepSearch, SemanticException e) throws SemanticException {
-		FunctionType routineType = null;
+		VarType type;
 		
 		if (deepSearch)
-			routineType = ctx.getScope().deepLookupRoutine(entity);
+			type = ctx.getScope().deepLookup(entity);
 		else
-			routineType = ctx.getScope().lookupRoutine(entity);
+			type = ctx.getScope().lookup(entity);
 		
+		// TODO
+		FunctionType routineType = (FunctionType)type;
+
 		return Optional.ofNullable(routineType).orElseThrow(() -> e);
 	}
 	
 	public static VarType checkTypealias(String typename, SemanticContext ctx, boolean deepSearch, SemanticException e) throws SemanticException {
-		VarType realType = null;
+		VarType type;
 		
 		if (deepSearch)
-			realType = ctx.getScope().deepLookupTypealias(typename);
+			type = ctx.getScope().deepLookup(typename);
 		else
-			realType = ctx.getScope().lookupTypealias(typename);
+			type = ctx.getScope().lookup(typename);
 		
+		// TODO
+		VarType realType = type;
+
 		return Optional.ofNullable(realType).orElseThrow(() -> e);
 	}
 }

@@ -106,7 +106,9 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 	public void validate(SemanticContext ctx) throws CompilerException {
 		validatePresence(ctx);
 		
-		FunctionType funcType = (FunctionType) ctx.getScope().deepLookupRoutine(routineName);
+		VarType type = ctx.getScope().deepLookup(routineName);
+		// TODO: Throw error
+		FunctionType funcType = (FunctionType) type;
 				
 		Iterator<Entry<String, VarType>> argsIter = funcType.getArgumentsTypes().entrySet().iterator();
 		Iterator<ExpressionASTNode> iter = arguments.iterator();
@@ -141,7 +143,9 @@ public class RoutineCallExpressionNode extends ExpressionASTNode {
 
 	@Override
 	protected VarType doTypeInference(SemanticContext ctx) throws SemanticException {
-		FunctionType varType = ctx.getScope().deepLookupRoutine(routineName);
+		VarType type = ctx.getScope().deepLookup(routineName);
+		// TODO: Add error
+		FunctionType varType = (FunctionType)type;
 		
 		return varType.getReturnType();
 	}
