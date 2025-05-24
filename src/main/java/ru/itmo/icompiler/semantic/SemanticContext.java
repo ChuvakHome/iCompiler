@@ -74,6 +74,9 @@ public class SemanticContext {
 			if (immutableEntities.containsKey(name)) {
 				return true;
 			}
+			if (entities.containsKey(name)) {
+				return false;
+			}
 			return parentScope != null && parentScope.isEntityImmutable(name);
 		}
 
