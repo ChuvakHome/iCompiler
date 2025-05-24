@@ -30,12 +30,14 @@ public class SemanticContext {
 	public static class Scope {
 		private Scope parentScope;
 		private Map<String, VarType> entities;
+		private Map<String, VarType> immutableEntities;
 		private Map<String, FunctionType> routines;
 		private Map<String, VarType> typealiases;
 		
-		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, FunctionType> routines, Map<String, VarType> typealiases) {
+		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, VarType> immutableEntities, Map<String, FunctionType> routines, Map<String, VarType> typealiases) {
 			this.parentScope = parentScope;
 			this.entities = new HashMap<>(entities);
+			this.immutableEntities = new HashMap<>(immutableEntities);
 			this.routines = new HashMap<>(routines);
 			this.typealiases = new HashMap<>(typealiases);
 		}
@@ -45,25 +47,39 @@ public class SemanticContext {
 		}
 		
 		public Scope(Scope parentScope) {
-			this(parentScope, new HashMap<>(), new HashMap<>(), new HashMap<>());
+			this(parentScope, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>());
 		}
 		
 		public Scope(Scope parentScope, Map<String, VarType> entities) {
-			this(parentScope, entities, new HashMap<>(), new HashMap<>());
+			this(parentScope, entities, new HashMap<>(), new HashMap<>(), new HashMap<>());
+		}
+
+		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, VarType> immutableEntities) {
+			this(parentScope, entities, immutableEntities, new HashMap<>(), new HashMap<>());
 		}
 		
-		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, FunctionType> routines) {
-			this(parentScope, entities, routines, new HashMap<>());
+		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, VarType> immutableEntities, Map<String, FunctionType> routines) {
+			this(parentScope, entities, immutableEntities, routines, new HashMap<>());
 		}
 		
-		public Scope(Map<String, VarType> entities, Map<String, VarType> typealiases) {
-			this(null, entities, new HashMap<>(), typealiases);
+		public Scope(Map<String, VarType> entities, Map<String, VarType> immutableEntities, Map<String, VarType> typealiases) {
+			this(null, entities, immutableEntities, new HashMap<>(), typealiases);
 		}
 		
 		public void addEntity(String name, VarType type) {
 			entities.put(name, type);
 		}
-		
+
+		public boolean isEntityImmutable(String name) {
+			if (immutableEntities.containsKey(name)) {
+				return true;
+			}
+			if (entities.containsKey(name)) {
+				return false;
+			}
+			return parentScope != null && parentScope.isEntityImmutable(name);
+		}
+
 		public void addRoutine(String name, FunctionType type) {
 			routines.put(name, type);
 		}
@@ -144,6 +160,7 @@ public class SemanticContext {
 		
 		public void clear() {
 			entities.clear();
+			immutableEntities.clear();
 			routines.clear();
 			typealiases.clear();
 		}

@@ -8,7 +8,7 @@ import ru.itmo.icompiler.syntax.ast.ASTNode;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Path;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.stream.Stream;
 
@@ -25,10 +25,18 @@ class ICompilerTest {
         return getTestFiles("src/test/resources/sem/bad");
     }
 
+    static Stream<Arguments> provideGoodOtherTestCases() throws IOException {
+        return getTestFiles("src/test/resources/sem/good_other");
+    }
+
+    static Stream<Arguments> provideBadOtherTestCases() throws IOException {
+        return getTestFiles("src/test/resources/sem/bad_other");
+    }
+
     @ParameterizedTest
     @MethodSource("provideGoodTestCases")
-    void parseGood(Path file) throws FileNotFoundException {
-        ICompiler compiler = new ICompiler(new File(file.toUri()));
+    void testGood(URI file) throws FileNotFoundException {
+        ICompiler compiler = new ICompiler(new File(file));
 
         ASTNode n = compiler.parseProgram();
         compiler.checkSemantic();
@@ -38,8 +46,30 @@ class ICompilerTest {
 
     @ParameterizedTest
     @MethodSource("provideBadTestCases")
-    void parseBad(Path file) throws FileNotFoundException {
-        ICompiler compiler = new ICompiler(new File(file.toUri()));
+    void testBad(URI file) throws FileNotFoundException {
+        ICompiler compiler = new ICompiler(new File(file));
+
+        ASTNode n = compiler.parseProgram();
+        compiler.checkSemantic();
+        assertNotEquals(new ArrayList<>(), compiler.getCompilerErrors());
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("provideGoodOtherTestCases")
+    void testGoodOther(URI file) throws FileNotFoundException {
+        ICompiler compiler = new ICompiler(new File(file));
+
+        ASTNode n = compiler.parseProgram();
+        compiler.checkSemantic();
+
+        assertEquals(new ArrayList<>(), compiler.getCompilerErrors());
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideBadOtherTestCases")
+    void testBadOther(URI file) throws FileNotFoundException {
+        ICompiler compiler = new ICompiler(new File(file));
 
         ASTNode n = compiler.parseProgram();
         compiler.checkSemantic();
