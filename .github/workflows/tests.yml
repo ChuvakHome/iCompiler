@@ -1,0 +1,21 @@
+name: Run tests
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Build & Test
+        run: |
+          mvn --batch-mode --update-snapshots verify
