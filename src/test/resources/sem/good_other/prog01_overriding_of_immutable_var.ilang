@@ -1,0 +1,11 @@
+routine loop_test(x: integer, y: integer) is
+ for i in 1..5 loop
+  var a is i
+
+  if true then
+   var i is 0
+
+   i := i * 2
+  end
+ end
+end
