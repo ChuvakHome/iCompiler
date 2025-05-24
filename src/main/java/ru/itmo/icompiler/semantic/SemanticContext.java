@@ -71,7 +71,10 @@ public class SemanticContext {
 		}
 
 		public boolean isEntityImmutable(String name) {
-			return immutableEntities.containsKey(name);
+			if (immutableEntities.containsKey(name)) {
+				return true;
+			}
+			return parentScope != null && parentScope.isEntityImmutable(name);
 		}
 
 		public void addRoutine(String name, FunctionType type) {
