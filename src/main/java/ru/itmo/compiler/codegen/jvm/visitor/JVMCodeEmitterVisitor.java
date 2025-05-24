@@ -884,16 +884,26 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				node.isReversed() ? node.getToExpression() : node.getFromExpression()
 			)
 		);
+
+		String forCounterEnd = newFreshVariable();
+
+		VariableExpressionNode counterEndValueExpr = new VariableExpressionNode(null, new Token(node.getLineNumber(), node.getLineOffset(), TokenType.IDENTIFIER, forCounterEnd));
+		counterEndValueExpr.setExpressionType(VarType.INTEGER_PRIMITIVE_TYPE);
+
+		VariableDeclarationASTNode counterEndValueDecl = new VariableDeclarationASTNode(null, VarType.INTEGER_PRIMITIVE_TYPE, fakeToken, forCounterEnd);
+		counterEndValueDecl.addChild(
+			new VariableAssignmentASTNode(null,
+				counterEndValueExpr,
+				node.isReversed() ? node.getFromExpression() : node.getToExpression()
+			)
+		);
+
 		scopedStmt.addChild(counterVarDecl);
-		
-		ExpressionASTNode conditionExpr;
-		
-		if (node.isReversed()) {
-			conditionExpr = new BinaryOperatorExpressionNode(null, fakeToken, BinaryOperatorType.GE_BINOP, counterVarExpr, node.getFromExpression()); 
-		} else {
-			conditionExpr = new BinaryOperatorExpressionNode(null, fakeToken, BinaryOperatorType.LE_BINOP, counterVarExpr, node.getToExpression());
-		}
-			
+		scopedStmt.addChild(counterEndValueDecl);
+
+		BinaryOperatorType conditionalComp = node.isReversed() ? BinaryOperatorType.GE_BINOP : BinaryOperatorType.LE_BINOP;
+		ExpressionASTNode conditionExpr = new BinaryOperatorExpressionNode(null, fakeToken, conditionalComp, counterVarExpr, counterEndValueExpr);
+
 		conditionExpr.setExpressionType(VarType.BOOLEAN_PRIMITIVE_TYPE);
 		
 		ExpressionASTNode mutExpr = new BinaryOperatorExpressionNode(null, fakeToken, node.isReversed() ? BinaryOperatorType.SUB_BINOP : BinaryOperatorType.ADD_BINOP, counterVarExpr, new IntegerValueExpressionNode(null, null, 1));
