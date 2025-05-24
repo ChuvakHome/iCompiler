@@ -203,8 +203,13 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		String typename = node.getTypename();
 		VarType newType = node.getType();
 		
-		// TODO: Check duplicates
-		ctx.getScope().addEntity(typename, newType);
+		Scope scope = ctx.getScope();
+		VarType entity = scope.lookup(typename);
+		if (entity != null) {
+			ctx.addCompilerError(new EntityRedefinitionSemanticException(typename, tk.lineNumber, 1, lookupDefinitionInfo(typename)));
+			return ctx;
+		}
+		scope.addEntity(typename, newType);
 		addDefinitionInfo(typename, new int[] { tk.lineNumber });
 		
 		return ctx;

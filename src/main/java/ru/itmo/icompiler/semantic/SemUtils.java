@@ -39,7 +39,6 @@ public class SemUtils {
 		else
 			type = ctx.getScope().lookup(entity);
 		
-		// TODO
 		FunctionType routineType = (FunctionType)type;
 
 		return Optional.ofNullable(routineType).orElseThrow(() -> e);
@@ -53,7 +52,7 @@ public class SemUtils {
 		else
 			type = ctx.getScope().lookup(typename);
 		
-		// TODO
+		// TODO: Check it's typealis? Probably.
 		VarType realType = type;
 
 		return Optional.ofNullable(realType).orElseThrow(() -> e);
