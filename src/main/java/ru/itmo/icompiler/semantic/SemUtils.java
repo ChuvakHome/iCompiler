@@ -35,9 +35,9 @@ public class SemUtils {
 		VarType type;
 		
 		if (deepSearch)
-			type = ctx.getScope().deepLookup(entity);
+			type = ctx.getScope().deepLookupEntity(entity);
 		else
-			type = ctx.getScope().lookup(entity);
+			type = ctx.getScope().lookupEntity(entity);
 
 		return Optional.ofNullable(type).orElseThrow(() -> e);
 	}
@@ -46,9 +46,9 @@ public class SemUtils {
 		VarType type;
 		
 		if (deepSearch)
-			type = ctx.getScope().deepLookup(typename);
+			type = ctx.getScope().deepLookupTypealias(typename);
 		else
-			type = ctx.getScope().lookup(typename);
+			type = ctx.getScope().lookupTypealias(typename);
 		
 		// TODO: Check it's typealis? Probably.
 		VarType realType = type;

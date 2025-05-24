@@ -64,7 +64,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 	}
 	
 	private SemanticContext visitRoutineArgDecl(VariableDeclarationASTNode node, SemanticContext ctx) {
-		if (ctx.getScope().lookupEntity(node.getVarName()) == null)
+		if (ctx.getScope().lookup(node.getVarName()) == null)
 			tryAddVariableToScope(node, ctx, false);
 		
 		return ctx;
@@ -209,7 +209,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			ctx.addCompilerError(new EntityRedefinitionSemanticException(typename, tk.lineNumber, 1, lookupDefinitionInfo(typename)));
 			return ctx;
 		}
-		scope.addEntity(typename, newType);
+		scope.addTypealias(typename, newType);
 		addDefinitionInfo(typename, new int[] { tk.lineNumber });
 		
 		return ctx;

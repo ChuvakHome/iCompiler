@@ -121,7 +121,7 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 		if (replaceType == null)
 			detachingCandidates.add(node);
 		else {
-			VarType oldEntityType = ctx.getScope().lookupEntity(typename);
+			VarType oldEntityType = ctx.getScope().lookup(typename);
 			
 			if (oldEntityType != null) {
 				ctx.addCompilerError(
@@ -132,7 +132,7 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 						)
 				);
 			} else {
-				ctx.getScope().addEntity(typename, replaceType);
+				ctx.getScope().addTypealias(typename, replaceType);
 				
 				addDefinitionInfo(typename, new int[] { tk.lineNumber });
 			}
