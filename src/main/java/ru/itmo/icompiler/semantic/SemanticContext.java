@@ -91,12 +91,17 @@ public class SemanticContext {
 		}
 		
 		public VarType deepLookupEntity(String entity) {
-			VarType type = lookupEntity(entity);
+			VarTypeWithInfo varType = entities.get(entity);
 			
-			if (type != null)
-				return type;
-			
-			return parentScope != null ? parentScope.deepLookupEntity(entity) : null;
+			if (varType != null && !varType.isTypeAlias) {
+				return varType.type;
+			}
+
+			if (parentScope != null && varType == null) {
+				return parentScope.deepLookupEntity(entity);
+			}
+
+			return null;
 		}
 		
 		public VarType lookupTypealias(String typename) {
@@ -110,12 +115,17 @@ public class SemanticContext {
 		}
 		
 		public VarType deepLookupTypealias(String typename) {
-			VarType type = lookupTypealias(typename);
+			VarTypeWithInfo varType = entities.get(typename);
 			
-			if (type != null)
-				return type;
-			
-			return parentScope != null ? parentScope.deepLookupTypealias(typename) : null;
+			if (varType != null && !varType.isTypeAlias) {
+				return varType.type;
+			}
+
+			if (parentScope != null && varType == null) {
+				return parentScope.deepLookupTypealias(typename);
+			}
+
+			return null;
 		}
 		
 		public VarType lookup(String name) {
