@@ -95,7 +95,7 @@ public class SemanticContext {
 			
 			if (entityInfo != null)
 				return entityInfo.isMutable;
-			
+	
 			return parentScope != null && parentScope.isEntityImmutable(name);
 		}
 		
