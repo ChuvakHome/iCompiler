@@ -10,6 +10,7 @@ import ru.itmo.icompiler.semantic.exception.DeadCodeSemanticException;
 import ru.itmo.icompiler.semantic.exception.NoReturnSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.CompoundStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -43,6 +44,10 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
         node.getBody().accept(this, ctx);
 
+        if (!parents.isEmpty()) {
+            cfg.put(new CompoundStatementASTNode(null), parents);
+        }
+
         VarType result = node.getRoutineDeclaration().getResultType();
         if (result != VarType.VOID_TYPE) {
             HashMap<ASTNode, ArrayList<ASTNode>> reverseCfg = new HashMap<>();
@@ -66,7 +71,12 @@ public class CFGASTVisitor extends AbstractASTVisitor {
             }
 
             for (Map.Entry<ASTNode, ArrayList<ASTNode>> en : reverseCfg.entrySet()) {
+                ASTNode key = en.getKey();
                 ArrayList<ASTNode> val = en.getValue();
+
+                if (key instanceof ReturnStatementASTNode) {
+                    continue;
+                }
 
                 if (val != null && !val.isEmpty()) {
                     continue;
@@ -82,6 +92,11 @@ public class CFGASTVisitor extends AbstractASTVisitor {
             ArrayList<ASTNode> val = en.getValue();
 
             if (val != null && !val.isEmpty()) {
+                continue;
+            }
+
+            if (key.getParentNode() == null) {
+                // Ignore pseudo node
                 continue;
             }
 
@@ -202,6 +217,11 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(VariableDeclarationASTNode node, SemanticContext ctx) {
+        if (cfg == null) {
+            // Not in routine
+            return ctx;
+        }
+        
         cfg.put(node, parents);
 
         parents = new ArrayList<>();
@@ -212,6 +232,11 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(VariableAssignmentASTNode node, SemanticContext ctx) {
+        if (cfg == null) {
+            // Not in routine
+            return ctx;
+        }
+
         cfg.put(node, parents);
 
         parents = new ArrayList<>();
