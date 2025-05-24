@@ -8,7 +8,7 @@ import ru.itmo.icompiler.syntax.ast.ASTNode;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Path;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.stream.Stream;
 
@@ -27,8 +27,8 @@ class ICompilerTest {
 
     @ParameterizedTest
     @MethodSource("provideGoodTestCases")
-    void parseGood(Path file) throws FileNotFoundException {
-        ICompiler compiler = new ICompiler(new File(file.toUri()));
+    void testGood(URI file) throws FileNotFoundException {
+        ICompiler compiler = new ICompiler(new File(file));
 
         ASTNode n = compiler.parseProgram();
         compiler.checkSemantic();
@@ -38,8 +38,8 @@ class ICompilerTest {
 
     @ParameterizedTest
     @MethodSource("provideBadTestCases")
-    void parseBad(Path file) throws FileNotFoundException {
-        ICompiler compiler = new ICompiler(new File(file.toUri()));
+    void testBad(URI file) throws FileNotFoundException {
+        ICompiler compiler = new ICompiler(new File(file));
 
         ASTNode n = compiler.parseProgram();
         compiler.checkSemantic();
