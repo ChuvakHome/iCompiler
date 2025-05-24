@@ -116,7 +116,6 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 								ctx.getCompilerErrors(),
 								new Scope(
 										ctx.getScope(),
-										Map.of(varName, varType),
 										Map.of(varName, varType)
 								)
 							), ctx);
