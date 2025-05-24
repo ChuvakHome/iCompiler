@@ -71,7 +71,7 @@ public class SemanticContext {
 		}
 		
 		public Scope(Scope parentScope) {
-			this(parentScope, Map.of(), Map.of());
+			this(parentScope, Map.of());
 		}
 		
 		public Scope(Scope parentScope, Map<String, VarType> entities) {
