@@ -207,6 +207,13 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
     @Override
     public SemanticContext visit(BreakStatementASTNode node, SemanticContext ctx) {
+        if (breaks == null) {
+            // Houston, we have a problem
+            // We're not in cycle
+            // Let's ignore break
+            return ctx;
+        }
+
         cfg.put(node, parents);
         breaks.add(node);
 

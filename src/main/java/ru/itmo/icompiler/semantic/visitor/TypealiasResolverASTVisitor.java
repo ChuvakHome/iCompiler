@@ -121,10 +121,9 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 		if (replaceType == null)
 			detachingCandidates.add(node);
 		else {
-			VarType oldEntityType = ctx.getScope().lookupEntity(typename);
-			VarType oldTypealiasType = ctx.getScope().lookupTypealias(typename);
+			VarType oldEntityType = ctx.getScope().lookup(typename);
 			
-			if (oldEntityType != null || oldTypealiasType != null) {
+			if (oldEntityType != null) {
 				ctx.addCompilerError(
 					new EntityRedefinitionSemanticException(
 							typename, 
