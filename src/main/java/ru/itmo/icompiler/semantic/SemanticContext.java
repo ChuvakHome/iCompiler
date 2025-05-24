@@ -70,7 +70,7 @@ public class SemanticContext {
 			entities.put(name, type);
 		}
 
-		public Boolean isEntityImmutable(String name) {
+		public boolean isEntityImmutable(String name) {
 			return immutableEntities.containsKey(name);
 		}
 
