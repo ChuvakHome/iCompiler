@@ -15,7 +15,6 @@ import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.Bran
 import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.IntCounter;
 import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.LocalVariableContext;
 import ru.itmo.icompiler.semantic.ArrayType;
-import ru.itmo.icompiler.semantic.ArrayType.SizedArrayType;
 import ru.itmo.icompiler.semantic.FunctionType;
 import ru.itmo.icompiler.semantic.RecordType;
 import ru.itmo.icompiler.semantic.RecordType.RecordProperty;
@@ -62,6 +61,10 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 						localVariableContext, 
 						labelCounter
 					);
+		}
+		
+		public IntCounter getLabelCounter() {
+			return labelCounter;
 		}
 	}
 	
@@ -145,22 +148,9 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		if (ctx == null || ctx.condition == null)
 			return Collections.emptyList();
 		
-		String thenLabel = ctx.thenLabel;
-		
-		if (thenLabel == null) {
-			thenLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-		}
-		
-		String elseLabel = ctx.elseLabel;
-		
-		if (elseLabel == null) {
-			elseLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-		}
-		
-		String endLabel = "L" + ctx.labelCounter;
-		ctx.labelCounter.incCounter();
+		String thenLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.thenLabel, ctx.labelCounter);
+		String elseLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.elseLabel, ctx.labelCounter);
+		String endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		instructions.add(
@@ -298,19 +288,8 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 					
 				break;
 			case NOT_BINOP: {
-				String thenLabel = ctx.thenLabel;
-				
-				if (thenLabel == null) {
-					thenLabel = "L" + ctx.labelCounter;
-					ctx.labelCounter.incCounter();
-				}
-				
-				String elseLabel = ctx.elseLabel;
-				
-				if (elseLabel == null) {
-					elseLabel = "L" + ctx.labelCounter;
-					ctx.labelCounter.incCounter();
-				}
+				String thenLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.thenLabel, ctx.labelCounter);
+				String elseLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.elseLabel, ctx.labelCounter);
 				
 				instructions.addAll(
 					node.getValue().accept(this, ctx.copy(
@@ -320,8 +299,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 							))
 				);
 				
-				String endLabel = "L" + ctx.labelCounter;
-				ctx.labelCounter.incCounter();
+				String endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 				
 				if (ctx.thenLabel == null) {
 					instructions.addAll(
@@ -392,22 +370,10 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 
 		Boolean isORBinop = node.getBinaryOperatorType() == BinaryOperatorType.OR_BINOP;
 		
-		String thenLabel = ctx.thenLabel;
+		String thenLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.thenLabel, ctx.labelCounter);
+		String elseLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.elseLabel, ctx.labelCounter);
 		
-		if (thenLabel == null) {
-			thenLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-		}
-		
-		String elseLabel = ctx.elseLabel;
-		
-		if (elseLabel == null) {
-			elseLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-		}
-		
-		String rightOperandLabel = "L" + ctx.labelCounter;
-		ctx.labelCounter.incCounter();
+		String rightOperandLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		BranchContext leftOpCtx = ctx.copy(
 				isORBinop,
@@ -418,18 +384,13 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		instructions.addAll(
 			node.getLeftChild().accept(this, leftOpCtx)
 		);
-//		instructions.add(
-//			isORBinop 
-//			? new JVMBytecodeInstruction("ifne", thenLabel)
-//			: new JVMBytecodeInstruction("ifeq", elseLabel)
-//		);
+		
 		instructions.add(new JVMBytecodeLabel(rightOperandLabel));
 		instructions.addAll(
 			node.getRightChild().accept(this, ctx.copy(ctx.condition != null ? ctx.condition : false, thenLabel, elseLabel))
 		);
 		
-		String endLabel = "L" + ctx.labelCounter;
-		ctx.labelCounter.incCounter();
+		String endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		if (ctx.thenLabel == null) {
 			instructions.addAll(
@@ -459,19 +420,8 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		instructions.addAll(node.getLeftChild().accept(this, ctx));
 		instructions.addAll(node.getRightChild().accept(this, ctx));
 		
-		String thenLabel = ctx.thenLabel;
-		
-		if (thenLabel == null) {
-			thenLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-		}
-		
-		String elseLabel = ctx.elseLabel;
-		
-		if (elseLabel == null) {
-			elseLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-		}
+		String thenLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.thenLabel, ctx.labelCounter);
+		String elseLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.elseLabel, ctx.labelCounter);
 		
 		BranchContext subctx = ctx.copy(ctx.condition, thenLabel, elseLabel);
 		
@@ -481,10 +431,9 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 			instructions.addAll(emitRealComparisonOpConditionalInstrs(node.getBinaryOperatorType(), subctx));
 		
 		String endLabel = null;
-		if (ctx.thenLabel == null || ctx.elseLabel == null) {
-			endLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
-		}
+		
+		if (ctx.thenLabel == null || ctx.elseLabel == null)
+			endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		if (ctx.thenLabel == null) {
 			instructions.add(
@@ -529,13 +478,6 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		instructions.addAll(node.getLeftChild().accept(this, ctx.copy(null, null, null)));
 		instructions.addAll(node.getRightChild().accept(this, ctx.copy(null, null, null)));
-		
-//		instructions.add(
-//			binop == BinaryOperatorType.AND_BINOP || binop == BinaryOperatorType.OR_BINOP
-//			? new JVMBytecodeInstruction(opcode)
-//			: new JVMBytecodeInstruction(instrPrefix + opcode)
-//		);
-		
 
 		instructions.add(
 			new JVMBytecodeInstruction(instrPrefix + opcode)
@@ -630,38 +572,12 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 				&& (castExpr.getExpressionNodeType() == ExpressionNodeType.UNOP_EXPR_NODE 
 				|| castExpr.getExpressionNodeType() == ExpressionNodeType.BINOP_EXPR_NODE
 			)) {
-//			String thenLabel = "L" + ctx.labelCounter;
-//			ctx.labelCounter.incCounter();
-//			
-//			String elseLabel = "L" + ctx.labelCounter;
-//			ctx.labelCounter.incCounter();
-			
 			instructions.addAll(
 				castExpr.accept(this, ctx.copy(null, null, null))
 			);
 			instructions.addAll(
 				generateBooleanValueInstructions(ctx.copy(false, null, null))
 			);
-//			instructions.add(
-//				new JVMBytecodeInstruction("ifeq", elseLabel)
-//			);
-//			
-//			String endLabel = "L" + ctx.labelCounter;
-//			ctx.labelCounter.incCounter();
-//			
-//			instructions.addAll(
-//				Arrays.asList(
-//					new JVMBytecodeInstructionLabeled(thenLabel, "iconst_1"),
-//					new JVMBytecodeInstruction("goto", endLabel)
-//				)
-//			);
-//			
-//			instructions.addAll(
-//				Arrays.asList(
-//						new JVMBytecodeInstructionLabeled(elseLabel, "iconst_0"),
-//						new JVMBytecodeLabel(endLabel)
-//					)
-//			);
 		} else {
 			instructions.addAll(
 				castExpr.accept(this, ctx.copy(null, null, null))
@@ -671,14 +587,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		if (actualCastExprType == VarType.INTEGER_PRIMITIVE_TYPE && targetType == VarType.REAL_PRIMITIVE_TYPE)
 			instructions.add(new JVMBytecodeInstruction("i2f"));
 		else if (actualCastExprType == VarType.INTEGER_PRIMITIVE_TYPE && targetType == VarType.BOOLEAN_PRIMITIVE_TYPE) {
-//			String thenLabel = "L" + ctx.labelCounter;
-//			ctx.labelCounter.incCounter();
-//			
-//			String elseLabel = "L" + ctx.labelCounter;
-//			ctx.labelCounter.incCounter();
-			
-			String afterCheckLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
+			String afterCheckLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 			
 			instructions.addAll(
 				Arrays.asList(

@@ -817,20 +817,16 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
-		String thenLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String thenLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		String elseLabel = null;
 		
 		ASTNode elseBranch = node.getElseBranch(); 
 		
-		if (elseBranch != null) {
-			elseLabel = "L" + ctx.getLabelCounter().getCounter();
-			ctx.getLabelCounter().incCounter();
-		}
+		if (elseBranch != null)
+			elseLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
-		String endLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		if (elseLabel == null)
 			elseLabel = endLabel;
@@ -969,23 +965,18 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		if (node.getToken() != null)
 			instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
-		String loopStartLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String loopStartLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		instructions.add(new JVMBytecodeLabel(loopStartLabel));
 		
-		String loopBodyLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
-		
-		String loopEndLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String loopBodyLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
+		String loopEndLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		instructions.addAll(
 			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(false, loopBodyLabel, loopEndLabel))
 		);
 		instructions.addAll(
 			Arrays.asList(
-//				new JVMBytecodeInstruction("ifeq", loopEndLabel),
 				new JVMBytecodeLabel(loopBodyLabel)
 			)
 		);
@@ -1072,26 +1063,14 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		);
 		
 		if (node.getExpressionType() == VarType.BOOLEAN_PRIMITIVE_TYPE) {
-			String thenLabel = ctx.thenLabel;
-			
-			if (thenLabel == null) {
-				thenLabel = "L" + ctx.labelCounter;
-				ctx.labelCounter.incCounter();
-			}
-			
-			String elseLabel = ctx.elseLabel;
-			
-			if (elseLabel == null) {
-				elseLabel = "L" + ctx.labelCounter;
-				ctx.labelCounter.incCounter();
-			}
+			String thenLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.thenLabel, ctx.labelCounter);
+			String elseLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.elseLabel, ctx.labelCounter);
 			
 			instructions.addAll(
 				node.accept(expressionVisitor, ctx.toBranchContext(null, thenLabel, elseLabel))
 			);
 			
-			String endLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
+			String endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 			
 			if (ctx.thenLabel == null) {
 				instructions.addAll(
