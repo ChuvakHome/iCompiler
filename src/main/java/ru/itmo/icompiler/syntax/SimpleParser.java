@@ -587,7 +587,7 @@ public class SimpleParser implements Parser {
 						if (!propDecl.getChildren().isEmpty())
 							expr = ((VariableAssignmentASTNode) propDecl.getChild(0)).getValueNode();
 						
-						properties.add(new RecordProperty(propDecl.getVarType(), propDecl.getVarName(), expr));
+						properties.add(new RecordProperty(propDecl.getVarType(), propDecl.getVarName(), expr, propDecl.getLineNumber(), propDecl.getLineOffset()));
 					}
 					
 					skipToken(true, TokenType.END_KEYWORD);

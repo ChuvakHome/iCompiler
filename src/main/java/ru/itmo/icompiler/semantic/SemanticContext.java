@@ -3,6 +3,7 @@ package ru.itmo.icompiler.semantic;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import ru.itmo.icompiler.exception.CompilerException;
 
@@ -28,16 +29,31 @@ public class SemanticContext {
 	}
 	
 	public static class Scope {
+		public class VarTypeWithInfo {
+			VarType type;
+			boolean isTypeAlias;
+
+			public VarTypeWithInfo(VarType type, boolean isTypeAlias) {
+				this.type = type;
+				this.isTypeAlias = isTypeAlias;
+			}
+		}
+
 		private Scope parentScope;
-		private Map<String, VarType> entities;
-		private Map<String, FunctionType> routines;
-		private Map<String, VarType> typealiases;
+		private Map<String, VarTypeWithInfo> entities;
 		
-		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, FunctionType> routines, Map<String, VarType> typealiases) {
+		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, VarType> typealiases) {
 			this.parentScope = parentScope;
-			this.entities = new HashMap<>(entities);
-			this.routines = new HashMap<>(routines);
-			this.typealiases = new HashMap<>(typealiases);
+			this.entities = new HashMap<>();
+			this.entities.putAll(
+				entities.entrySet().stream()
+				.collect(Collectors.toMap(Map.Entry::getKey, e -> new VarTypeWithInfo(e.getValue(), false)))
+			);
+			this.entities.putAll(
+				typealiases.entrySet().stream()
+				.collect(Collectors.toMap(Map.Entry::getKey, e -> new VarTypeWithInfo(e.getValue(), false)))
+			);
+			// this.typealiases = new HashMap<>(typealiases);
 		}
 		
 		public Scope() {
@@ -45,92 +61,81 @@ public class SemanticContext {
 		}
 		
 		public Scope(Scope parentScope) {
-			this(parentScope, new HashMap<>(), new HashMap<>(), new HashMap<>());
+			this(parentScope, new HashMap<>(), new HashMap<>());
 		}
 		
 		public Scope(Scope parentScope, Map<String, VarType> entities) {
-			this(parentScope, entities, new HashMap<>(), new HashMap<>());
-		}
-		
-		public Scope(Scope parentScope, Map<String, VarType> entities, Map<String, FunctionType> routines) {
-			this(parentScope, entities, routines, new HashMap<>());
+			this(parentScope, entities, new HashMap<>());
 		}
 		
 		public Scope(Map<String, VarType> entities, Map<String, VarType> typealiases) {
-			this(null, entities, new HashMap<>(), typealiases);
+			this(null, entities, typealiases);
 		}
 		
 		public void addEntity(String name, VarType type) {
-			entities.put(name, type);
-		}
-		
-		public void addRoutine(String name, FunctionType type) {
-			routines.put(name, type);
+			entities.put(name, new VarTypeWithInfo(type, false));
 		}
 		
 		public void addTypealias(String name, VarType type) {
-			typealiases.put(name, type);
+			entities.put(name, new VarTypeWithInfo(type, true));
 		}
 		
 		public VarType lookupEntity(String entity) {
-			VarType varType = entities.get(entity);
+			VarTypeWithInfo varType = entities.get(entity);
 			
-			return varType;
+			if (varType != null && !varType.isTypeAlias) {
+				return varType.type;
+			}
+
+			return null;
 		}
 		
 		public VarType deepLookupEntity(String entity) {
-			VarType type = lookupEntity(entity);
+			VarTypeWithInfo varType = entities.get(entity);
 			
-			if (type != null)
-				return type;
-			
-			return parentScope != null ? parentScope.deepLookupEntity(entity) : null;
-		}
-		
-		public FunctionType lookupRoutine(String entity) {
-			FunctionType varType = routines.get(entity);
-			
-			return varType;
-		}
-		
-		public FunctionType deepLookupRoutine(String entity) {
-			FunctionType type = lookupRoutine(entity);
-			
-			if (type != null)
-				return type;
-			
-			return parentScope != null ? parentScope.deepLookupRoutine(entity) : null;
+			if (varType != null && !varType.isTypeAlias) {
+				return varType.type;
+			}
+
+			if (parentScope != null && varType == null) {
+				return parentScope.deepLookupEntity(entity);
+			}
+
+			return null;
 		}
 		
 		public VarType lookupTypealias(String typename) {
-			VarType varType = typealiases.get(typename);
+			VarTypeWithInfo varType = entities.get(typename);
 			
-			return varType;
+			if (varType != null && varType.isTypeAlias) {
+				return varType.type;
+			}
+
+			return null;
 		}
 		
 		public VarType deepLookupTypealias(String typename) {
-			VarType type = lookupTypealias(typename);
+			VarTypeWithInfo varType = entities.get(typename);
 			
-			if (type != null)
-				return type;
-			
-			return parentScope != null ? parentScope.deepLookupTypealias(typename) : null;
+			if (varType != null && varType.isTypeAlias) {
+				return varType.type;
+			}
+
+			if (parentScope != null && varType == null) {
+				return parentScope.deepLookupTypealias(typename);
+			}
+
+			return null;
 		}
 		
 		public VarType lookup(String name) {
-			VarType t = lookupEntity(name);
+			VarTypeWithInfo varType = entities.get(name);
 			
-			if (t != null)
-				return t;
-			
-			t = lookupRoutine(name);
-			
-			if (t != null)
-				return t;
-			
-			t = lookupTypealias(name);
-			
-			return t;
+			if (varType != null) {
+				return varType.type;
+			}
+
+			return null;
 		}
 		
 		public VarType deepLookup(String name) {
@@ -144,8 +149,6 @@ public class SemanticContext {
 		
 		public void clear() {
 			entities.clear();
-			routines.clear();
-			typealiases.clear();
 		}
 		
 		public Scope getParentScope() {
