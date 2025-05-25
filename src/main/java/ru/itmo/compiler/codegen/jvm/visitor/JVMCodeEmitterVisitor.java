@@ -193,12 +193,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			return elseLabel;
 		}
 		
-		public BranchContext toBranchContext() {
-			return toBranchContext(thenLabel, elseLabel);
+		public BranchContext toBranchContext(Boolean condition) {
+			return toBranchContext(condition, thenLabel, elseLabel);
 		}
 		
-		public BranchContext toBranchContext(String thenLabel, String elseLabel) {
-			return new BranchContext(thenLabel, elseLabel, localVarCtx, labelCounter);
+		public BranchContext toBranchContext(Boolean condition, String thenLabel, String elseLabel) {
+			return new BranchContext(condition, thenLabel, elseLabel, localVarCtx, labelCounter);
 		}
 	}
 	
@@ -210,9 +210,6 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	
 	private FunctionType currentRoutineType;
 	
-//	private Map<String, VariableAssignmentASTNode> globalVarsAssignments;
-//	private Map<String, VarType> globalComponentVars;
-	
 	private Set<RecordType> declaredRecords;
 	
 	private String sourceName;
@@ -220,9 +217,6 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 	public JVMCodeEmitterVisitor(String sourceName) {
 		contextStack = new Stack<>();
 		expressionVisitor = new JVMCodeEmitterExpressionVisitor();
-		
-//		globalComponentVars = new HashMap<>();
-//		globalVarsAssignments = new HashMap<>();
 		
 		declaredRecords = new HashSet<>();
 		
@@ -326,7 +320,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 						VariableAssignmentASTNode assignNode = (VariableAssignmentASTNode) declNode.getChild(0);
 						ExpressionASTNode assignExprNode = assignNode.getValueNode();
 						clinitMethodInstructions.addAll(
-							assignExprNode.accept(expressionVisitor, new BranchContext(null, null, null, labelCounter))
+							assignExprNode.accept(expressionVisitor, new BranchContext(null, null, null, null, labelCounter))
 						);
 					}
 					
@@ -617,7 +611,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		ExpressionASTNode valueNode = node.getValueNode();
 		
-		List<JVMBytecodeEntity> valueCompInstrs = valueNode.accept(expressionVisitor, ctx.toBranchContext());
+		List<JVMBytecodeEntity> valueCompInstrs = valueNode.accept(expressionVisitor, ctx.toBranchContext(null));
 		
 		switch (leftSideNode.getExpressionNodeType()) {
 			case VARIABLE_EXPR_NODE: {
@@ -659,10 +653,10 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				ArrayType arrayType = (ArrayType) holderExpr.getExpressionType();
 				
 				instructions.addAll(
-					holderExpr.accept(expressionVisitor, ctx.toBranchContext())
+					holderExpr.accept(expressionVisitor, ctx.toBranchContext(null))
 				);
 				instructions.addAll(
-					arrAccNode.getIndex().accept(expressionVisitor, ctx.toBranchContext())
+					arrAccNode.getIndex().accept(expressionVisitor, ctx.toBranchContext(null))
 				);
 				instructions.addAll(
 					Arrays.asList(
@@ -685,7 +679,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				
 				ExpressionASTNode holder = propAccNode.getPropertyHolder();
 				instructions.addAll(
-					holder.accept(expressionVisitor, ctx.toBranchContext())
+					holder.accept(expressionVisitor, ctx.toBranchContext(null))
 				);
 				
 				RecordType recordType = (RecordType) holder.getExpressionType();
@@ -807,7 +801,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
 		instructions.addAll(
-			returnValueExprNode.accept(expressionVisitor, ctx.toBranchContext())
+			returnValueExprNode.accept(expressionVisitor, ctx.toBranchContext(null))
 		);
 		instructions.add(
 			new JVMBytecodeInstruction(
@@ -823,29 +817,24 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
-		String thenLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String thenLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		String elseLabel = null;
 		
 		ASTNode elseBranch = node.getElseBranch(); 
 		
-		if (elseBranch != null) {
-			elseLabel = "L" + ctx.getLabelCounter().getCounter();
-			ctx.getLabelCounter().incCounter();
-		}
+		if (elseBranch != null)
+			elseLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
-		String endLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		if (elseLabel == null)
 			elseLabel = endLabel;
 		
 		instructions.addAll(
-			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(thenLabel, elseLabel))
+			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(false, thenLabel, elseLabel))
 		);
 		
-		instructions.add(new JVMBytecodeInstruction("ifeq", elseLabel));
 		instructions.add(new JVMBytecodeLabel(thenLabel));
 		instructions.addAll(
 			node.getTrueBranch().accept(this, ctx)
@@ -976,23 +965,18 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		if (node.getToken() != null)
 			instructions.add(new JVMBytecodeDirective("line", node.getLineNumber()));
 		
-		String loopStartLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String loopStartLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		instructions.add(new JVMBytecodeLabel(loopStartLabel));
 		
-		String loopBodyLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
-		
-		String loopEndLabel = "L" + ctx.getLabelCounter().getCounter();
-		ctx.getLabelCounter().incCounter();
+		String loopBodyLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
+		String loopEndLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		instructions.addAll(
-			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(loopBodyLabel, loopEndLabel))
+			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(false, loopBodyLabel, loopEndLabel))
 		);
 		instructions.addAll(
 			Arrays.asList(
-				new JVMBytecodeInstruction("ifeq", loopEndLabel),
 				new JVMBytecodeLabel(loopBodyLabel)
 			)
 		);
@@ -1048,7 +1032,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			
 			ExpressionASTNode arg = (ExpressionASTNode) child;
 			
-			List<JVMBytecodeEntity> computeArgInstructions = arg.accept(expressionVisitor, ctx.toBranchContext());
+			List<JVMBytecodeEntity> computeArgInstructions = arg.accept(expressionVisitor, ctx.toBranchContext(null));
 			
 			VarType argType = arg.getExpressionType();
 			
@@ -1079,26 +1063,14 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		);
 		
 		if (node.getExpressionType() == VarType.BOOLEAN_PRIMITIVE_TYPE) {
-			String thenLabel = ctx.thenLabel;
-			
-			if (thenLabel == null) {
-				thenLabel = "L" + ctx.labelCounter;
-				ctx.labelCounter.incCounter();
-			}
-			
-			String elseLabel = ctx.elseLabel;
-			
-			if (elseLabel == null) {
-				elseLabel = "L" + ctx.labelCounter;
-				ctx.labelCounter.incCounter();
-			}
+			String thenLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.thenLabel, ctx.labelCounter);
+			String elseLabel = CodeEmitterUtils.getOrAllocateLabel(ctx.elseLabel, ctx.labelCounter);
 			
 			instructions.addAll(
-				node.accept(expressionVisitor, ctx.toBranchContext(thenLabel, elseLabel))
+				node.accept(expressionVisitor, ctx.toBranchContext(null, thenLabel, elseLabel))
 			);
 			
-			String endLabel = "L" + ctx.labelCounter;
-			ctx.labelCounter.incCounter();
+			String endLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 			
 			if (ctx.thenLabel == null) {
 				instructions.addAll(
@@ -1119,7 +1091,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			}
 		} else {
 			instructions.addAll(
-				node.accept(expressionVisitor, ctx.toBranchContext())
+				node.accept(expressionVisitor, ctx.toBranchContext(null))
 			);
 		}
 		

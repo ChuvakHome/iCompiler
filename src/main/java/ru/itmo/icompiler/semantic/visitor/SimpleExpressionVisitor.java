@@ -79,7 +79,11 @@ public class SimpleExpressionVisitor extends AbstractExpressionASTVisitor {
 
 	@Override
 	public SemanticContext visit(UnaryOperatorExpressionNode node, SemanticContext ctx) {
-		node.getValue().accept(this, ctx);
+		ExpressionASTNode unopValue = node.getValue();
+		unopValue.accept(this, ctx);
+		
+		if (!unopValue.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
+			node.setValue(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, unopValue));
 		
 		return ctx;
 	}
