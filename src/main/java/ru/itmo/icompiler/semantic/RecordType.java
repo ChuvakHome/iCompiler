@@ -17,14 +17,19 @@ public class RecordType extends CompoundType {
 		public final String name;
 		public final ExpressionASTNode defaultValue;
 		
-		public RecordProperty(VarType type, String name, ExpressionASTNode defaultValue) {
+		public final int line, offset;
+		
+		public RecordProperty(VarType type, String name, ExpressionASTNode defaultValue, int line, int offset) {
 			this.type = type;
 			this.name = name;
 			this.defaultValue = defaultValue;
+			
+			this.line = line;
+			this.offset = offset;
 		}
 		
-		public RecordProperty(VarType type, String name) {
-			this(type, name, null);
+		public RecordProperty(VarType type, String name, int line, int offset) {
+			this(type, name, null, line, offset);
 		}
 		
 		public int hashCode() {

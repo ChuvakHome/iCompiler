@@ -17,7 +17,7 @@ public class SemUtils {
 		
 		Typealias typealias = (Typealias) providedType;
 		
-		return ctx.getScope().deepLookup(typealias.getTypename());
+		return ctx.getScope().deepLookupTypealias(typealias.getTypename());
 	}
 	
 	public static VarType checkEntity(String entity, SemanticContext ctx, boolean deepSearch, SemanticException e) throws SemanticException {

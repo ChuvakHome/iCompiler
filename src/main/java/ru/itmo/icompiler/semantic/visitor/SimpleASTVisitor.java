@@ -206,7 +206,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		Scope scope = ctx.getScope();
 		VarType entity = scope.lookup(typename);
 		if (entity != null) {
-			ctx.addCompilerError(new EntityRedefinitionSemanticException(typename, tk.lineNumber, 1, lookupDefinitionInfo(typename)));
+			ctx.addCompilerError(new EntityRedefinitionSemanticException(typename, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(typename)));
 			return ctx;
 		}
 		scope.addTypealias(typename, newType);
@@ -327,7 +327,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(ForInRangeStatementASTNode node, SemanticContext ctx) {
 		ExpressionASTNode fromExpr = node.getFromExpression();
 		ExpressionASTNode toExpr = node.getToExpression();
-
+		
 		try {
 			fromExpr.validate(ctx);
 			fromExpr.checkType(ctx, VarType.INTEGER_PRIMITIVE_TYPE);
@@ -351,6 +351,9 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		}
 		
 		openScope();
+		
+		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
+		
 		Scope subscope = new Scope(ctx.getScope(), Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE));
 		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), subscope));
 		closeScope();
@@ -385,6 +388,9 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		}
 		
 		openScope();
+		
+		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
+		
 		node.getBody().accept(this, bodyCtx);
 		closeScope();
 		

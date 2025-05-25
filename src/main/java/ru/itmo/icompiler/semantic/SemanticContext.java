@@ -107,7 +107,7 @@ public class SemanticContext {
 		public VarType lookupTypealias(String typename) {
 			VarTypeWithInfo varType = entities.get(typename);
 			
-			if (varType != null && !varType.isTypeAlias) {
+			if (varType != null && varType.isTypeAlias) {
 				return varType.type;
 			}
 
@@ -117,7 +117,7 @@ public class SemanticContext {
 		public VarType deepLookupTypealias(String typename) {
 			VarTypeWithInfo varType = entities.get(typename);
 			
-			if (varType != null && !varType.isTypeAlias) {
+			if (varType != null && varType.isTypeAlias) {
 				return varType.type;
 			}
 

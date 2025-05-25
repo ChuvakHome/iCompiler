@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import ru.itmo.icompiler.exception.CompilerException;
 import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.ArrayType.SizedArrayType;
@@ -52,14 +53,23 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 				List<RecordProperty> props = new ArrayList<>();
 				RecordType recordType = (RecordType) realType;
 				
+				List<CompilerException> propertyResolvingErrors = new ArrayList<>();
+				
 				for (RecordProperty prop: recordType.getProperties()) {
 					VarType propRealType = processType(prop.type, ctx);
 					
 					if (propRealType != null)
-						props.add(new RecordProperty(propRealType, prop.name));
+						props.add(new RecordProperty(propRealType, prop.name, prop.line, prop.offset));
+					else
+						propertyResolvingErrors.add(new UndefinedTypeSemanticException(prop.type.getTypename(), prop.line, prop.offset));
 				}
 				
-				return new RecordType(props);
+				if (propertyResolvingErrors.isEmpty())
+					return new RecordType(props);
+			
+				propertyResolvingErrors.forEach(ctx::addCompilerError);
+				
+				return null;
 			case ARRAY:
 				ArrayType arrayType = (ArrayType) realType;
 				
@@ -99,9 +109,11 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(VariableDeclarationASTNode node, SemanticContext ctx) {
 		VarType realVarType = findRealTypeWithFailureReport(node.getVarType(), node.getToken(), ctx);
 		
-		if (realVarType != null)
+		if (realVarType != null) {
 			node.setVarType(realVarType);
-		else
+			
+			ctx.getScope().addEntity(node.getVarName(), realVarType);
+		} else
 			detachingCandidates.add(node);
 		
 		return ctx;
@@ -116,6 +128,7 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(TypeDeclarationASTNode node, SemanticContext ctx) {
 		Token tk = node.getToken();
 		String typename = node.getTypename();
+		
 		VarType replaceType = findRealTypeWithFailureReport(node.getType(), node.getToken(), ctx);
 		
 		if (replaceType == null)
