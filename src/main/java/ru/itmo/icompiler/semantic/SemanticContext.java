@@ -94,7 +94,7 @@ public class SemanticContext {
 			VarTypeWithInfo entityInfo = entities.get(name);
 			
 			if (entityInfo != null)
-				return entityInfo.isMutable;
+				return !entityInfo.isMutable;
 	
 			return parentScope != null && parentScope.isEntityImmutable(name);
 		}
