@@ -1,9 +1,5 @@
 package ru.itmo.icompiler.codegen.jvm.visitor;
 
-import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.classSpecs;
-import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.fieldSpecs;
-import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,10 +16,13 @@ import ru.itmo.icompiler.codegen.jvm.JVMBytecodeDirective;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeEntity;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeField;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction;
-import ru.itmo.icompiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeInstructionLabeled;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeLabel;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.classSpecs;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.fieldSpecs;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
 import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
 import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
 import ru.itmo.icompiler.lex.Token;
@@ -567,6 +566,15 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		ctx.localVarCtx.addLocalVariable(varName, lvIndex);
 		
 		switch (varType.getTag()) {
+			case PRIMITIVE: {
+					instructions.addAll(
+						JVMBytecodeUtils.pushDefaultValueForType(varType)
+					);
+					String prefix = JVMBytecodeUtils.PRIMITIVE_TYPE_OPCODE_MAPPER.get(varType);
+					instructions.add(new JVMBytecodeInstruction(prefix + "store", lvIndex));
+					
+					break;
+				} 
 			case ARRAY: {
 				SizedArrayType arrayType = (SizedArrayType) node.getVarType();
 				
@@ -716,7 +724,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(TypeDeclarationASTNode node, ExpressionVisitorContext ctx) {
-		return null;
+		return new ArrayList<>();
 	}
 
 	@Override
