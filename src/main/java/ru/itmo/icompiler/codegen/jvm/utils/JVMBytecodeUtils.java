@@ -723,8 +723,9 @@ public final class JVMBytecodeUtils {
 					delta = -1;
 					break;
 				case "multianewarray":
-					// TODO
-					delta = -1;
+					String argsCount = instruction.getArg(1);
+					// Args declared - result
+					delta = -Integer.parseInt(argsCount) + 1;
 					break;
 				case "new":
 					delta = 1;
