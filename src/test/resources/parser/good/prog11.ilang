@@ -1,8 +1,8 @@
 type SATSolverResult is boolean
 
 var Solver : record
-  var UNSAT : SATSolverResult is false
-  var SAT   : SATSolverResult is true
+  var UNSAT : SATSolverResult
+  var SAT   : SATSolverResult
 end
 
 routine solve(

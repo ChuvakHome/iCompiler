@@ -62,8 +62,9 @@ public class RecordType extends CompoundType {
 		
 		this.properties = new LinkedHashMap<>();
 		
-		for (RecordProperty prop: properties)
-			this.properties.put(prop.name, prop);
+		properties.stream().sorted((prop1, prop2) -> prop1.name.compareTo(prop2.name)).forEachOrdered(
+			prop -> this.properties.put(prop.name, prop)
+		);
 	}
 	
 	public Map<String, VarType> getPropertiesTypes() {
