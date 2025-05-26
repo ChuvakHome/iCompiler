@@ -107,6 +107,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 				assignValue.validate(ctx);
 				varType = assignNode.getValueNode().inferType(ctx);
 				
+				node.setVarType(varType);
 				tryAddVariableToScope(node, ctx, true);
 				assignNode.getLeftSide().inferType(ctx); // force to cache variable type
 			} catch (CompilerException e) {
