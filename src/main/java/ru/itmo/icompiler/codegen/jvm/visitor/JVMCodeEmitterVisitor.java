@@ -1,9 +1,5 @@
 package ru.itmo.icompiler.codegen.jvm.visitor;
 
-import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.classSpecs;
-import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.fieldSpecs;
-import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,10 +16,13 @@ import ru.itmo.icompiler.codegen.jvm.JVMBytecodeDirective;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeEntity;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeField;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction;
-import ru.itmo.icompiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeInstructionLabeled;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeLabel;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.classSpecs;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.fieldSpecs;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
 import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
 import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
 import ru.itmo.icompiler.lex.Token;
@@ -349,6 +348,8 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			new JVMBytecodeInstruction("return")
 		);
 		
+		stackSize = JVMBytecodeUtils.maxStackSize(clinitMethodInstructions);
+
 		return new JVMBytecodeMethod(
 					methodSpecs(JVMBytecodeMethod.AccessSpec.STATIC),
 					"<clinit>",
@@ -424,6 +425,8 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		initMethodInstructions.add(new JVMBytecodeInstruction("return"));
 		
+		stackSize = JVMBytecodeUtils.maxStackSize(initMethodInstructions);
+
 		return Arrays.asList(
 				new JVMBytecodeClass(
 					classSpecs(JVMBytecodeClass.AccessSpec.PUBLIC, JVMBytecodeClass.AccessSpec.FINAL),
@@ -775,6 +778,8 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 //		if (routineHeader.getResultType() == VarType.VOID_TYPE)
 			routineInstructions.add(new JVMBytecodeInstruction("return"));
 		
+		int stackSize = JVMBytecodeUtils.maxStackSize(routineInstructions);
+
 		return Arrays.asList(
 				new JVMBytecodeMethod(
 					methodSpecs(
@@ -785,7 +790,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 					argsTypesDescriptors,
 					returnTypeDescriptor, 
 					maxLocalVarNumber, 
-					10,
+					stackSize,
 					routineInstructions
 				)
 			);
