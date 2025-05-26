@@ -724,7 +724,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 
 	@Override
 	public List<JVMBytecodeEntity> visit(TypeDeclarationASTNode node, ExpressionVisitorContext ctx) {
-		return null;
+		return new ArrayList<>();
 	}
 
 	@Override
