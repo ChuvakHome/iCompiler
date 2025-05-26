@@ -13,9 +13,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor;
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeEntity;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
 import ru.itmo.icompiler.exception.CompilerException;
 import ru.itmo.icompiler.lex.DFALexer;
 import ru.itmo.icompiler.lex.LexUtils;
@@ -73,7 +73,7 @@ public class ICompiler {
 			
 			parseResult = parser.parse(); 
 			
-			compilerErrors.addAll(parser.getSyntaxErrors());
+			compilerErrors.addAll(parser.getParseErrors());
 		}
 		
 		return parseResult; 

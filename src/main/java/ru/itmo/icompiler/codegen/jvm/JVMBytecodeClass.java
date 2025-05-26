@@ -1,4 +1,4 @@
-package ru.itmo.compiler.codegen.jvm;
+package ru.itmo.icompiler.codegen.jvm;
 
 import java.util.Arrays;
 import java.util.List;

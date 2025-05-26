@@ -60,8 +60,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		if (ctx.getScope().lookup(varName) != null) {
 			if (reportRedefintion)
 				ctx.addCompilerError(new EntityRedefinitionSemanticException(varName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(varName)));
-		}
-		else {
+		} else {
 			addDefinitionInfo(varName, new int[] { tk.lineNumber });
 			ctx.getScope().addEntity(varName, varType);
 		}
@@ -108,7 +107,8 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 				assignValue.validate(ctx);
 				varType = assignNode.getValueNode().inferType(ctx);
 				
-				ctx.getScope().addEntity(varName, varType);
+				node.setVarType(varType);
+				tryAddVariableToScope(node, ctx, true);
 				assignNode.getLeftSide().inferType(ctx); // force to cache variable type
 			} catch (CompilerException e) {
 				varType = null;
@@ -253,8 +253,10 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			if (isDeclared) {
 				if (funcType.equals(entityType))
 					addDefinitionInfo(routineName, new int[] { tk.lineNumber });
-				else
+				else if (entityType.getTag() == Tag.FUNCTION)
 					throw new RoutineDeclarationMismatchSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
+				else
+					throw new EntityRedefinitionSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
 			} else {
 				addDefinitionInfo(routineName, new int[] { tk.lineNumber });
 				ctx.getScope().addEntity(routineName, funcType);
@@ -314,9 +316,12 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			ExpressionASTNode conditionExpr = node.getConditionExpression();
 			
-			conditionExpr.accept(this, ctx);
-			if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
-				node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			if (conditionExpr != null) {
+				conditionExpr.accept(this, ctx);
+				
+				if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
+					node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
 		}
@@ -381,28 +386,28 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(ForEachStatementASTNode node, SemanticContext ctx) {
 		ExpressionASTNode arrayExpr = node.getArrayExpression();
 		
-		SemanticContext bodyCtx; 
+		SemanticContext bodyCtx = new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope()));
 		
 		try {
-			arrayExpr.validate(ctx);
-			VarType iterEntityType = arrayExpr.inferType(ctx);
-			
-			if (iterEntityType.getTag() == VarType.Tag.ARRAY) {
-				ArrayType iterArray = (ArrayType) iterEntityType;
+			if (arrayExpr != null) {
+				arrayExpr.validate(ctx);
+				VarType iterEntityType = arrayExpr.inferType(ctx);
 				
-				Scope subscope = new Scope(
-						ctx.getScope(),
-						Map.of(),
-						Map.of(node.getIterVariable(), iterArray.getElementType())
-				);
-				
-				bodyCtx = new SemanticContext(ctx.getCompilerErrors(), subscope);
-			} else
-				throw new NonIterableInForEachSemanticException(iterEntityType, arrayExpr.getStartToken().lineNumber, arrayExpr.getStartToken().lineOffset);
+				if (iterEntityType.getTag() == VarType.Tag.ARRAY) {
+					ArrayType iterArray = (ArrayType) iterEntityType;
+					
+					Scope subscope = new Scope(
+							ctx.getScope(),
+							Map.of(),
+							Map.of(node.getIterVariable(), iterArray.getElementType())
+					);
+					
+					bodyCtx = new SemanticContext(ctx.getCompilerErrors(), subscope);
+				} else
+					throw new NonIterableInForEachSemanticException(iterEntityType, arrayExpr.getStartToken().lineNumber, arrayExpr.getStartToken().lineOffset);
+			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
-			
-			bodyCtx = new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope()));
 		}
 		
 		openScope();
@@ -422,9 +427,12 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			ExpressionASTNode conditionExpr = node.getConditionExpression();
 			
-			conditionExpr.accept(this, ctx);
-			if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
-				node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			if (conditionExpr != null) {
+				conditionExpr.accept(this, ctx);
+				
+				if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
+					node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
 		}

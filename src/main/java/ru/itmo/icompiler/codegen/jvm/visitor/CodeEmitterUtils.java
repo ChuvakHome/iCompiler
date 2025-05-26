@@ -1,6 +1,6 @@
-package ru.itmo.compiler.codegen.jvm.visitor;
+package ru.itmo.icompiler.codegen.jvm.visitor;
 
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.IntCounter;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.IntCounter;
 
 public final class CodeEmitterUtils {
 	private CodeEmitterUtils() {}

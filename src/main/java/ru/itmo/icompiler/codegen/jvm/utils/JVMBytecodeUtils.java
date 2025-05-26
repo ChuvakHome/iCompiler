@@ -1,14 +1,14 @@
-package ru.itmo.compiler.codegen.jvm.utils;
+package ru.itmo.icompiler.codegen.jvm.utils;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeClass;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeField;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeMethod;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeClass;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeEntity;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeField;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeMethod;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.RecordType;
 import ru.itmo.icompiler.semantic.VarType;
