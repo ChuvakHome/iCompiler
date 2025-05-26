@@ -93,7 +93,7 @@ public class RecordType extends CompoundType {
 	
 	@Override
 	public int hashCode() {
-		List objects = new ArrayList<>();
+		List<Object> objects = new ArrayList<>();
 		
 		objects.add(VarType.Tag.RECORD);
 		properties.values().forEach(objects::add);

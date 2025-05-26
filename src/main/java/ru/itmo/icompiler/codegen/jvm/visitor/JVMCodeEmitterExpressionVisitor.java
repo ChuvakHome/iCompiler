@@ -1,4 +1,4 @@
-package ru.itmo.compiler.codegen.jvm.visitor;
+package ru.itmo.icompiler.codegen.jvm.visitor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,14 +6,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeInstructionLabeled;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeLabel;
-import ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils;
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.IntCounter;
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.LocalVariableContext;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeEntity;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeInstructionLabeled;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeLabel;
+import ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.IntCounter;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.LocalVariableContext;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.FunctionType;
 import ru.itmo.icompiler.semantic.RecordType;

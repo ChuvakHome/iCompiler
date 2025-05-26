@@ -1,8 +1,8 @@
-package ru.itmo.compiler.codegen.jvm.visitor;
+package ru.itmo.icompiler.codegen.jvm.visitor;
 
-import static ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils.classSpecs;
-import static ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils.fieldSpecs;
-import static ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.classSpecs;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.fieldSpecs;
+import static ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils.methodSpecs;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,17 +15,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeClass;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeDirective;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeEntity;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeField;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeInstructionLabeled;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeLabel;
-import ru.itmo.compiler.codegen.jvm.JVMBytecodeMethod;
-import ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils;
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
-import ru.itmo.compiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeClass;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeDirective;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeEntity;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeField;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeMethod;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeInstructionLabeled;
+import ru.itmo.icompiler.codegen.jvm.JVMBytecodeInstruction.JVMBytecodeLabel;
+import ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterExpressionVisitor.BranchContext;
+import ru.itmo.icompiler.codegen.jvm.visitor.JVMCodeEmitterVisitor.ExpressionVisitorContext;
 import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.lex.Token.TokenType;
 import ru.itmo.icompiler.semantic.ArrayType;

@@ -1,4 +1,4 @@
-package ru.itmo.compiler.codegen.jvm;
+package ru.itmo.icompiler.codegen.jvm;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import ru.itmo.compiler.codegen.jvm.utils.JVMBytecodeUtils;
+import ru.itmo.icompiler.codegen.jvm.utils.JVMBytecodeUtils;
 
 public class JVMBytecodeMethod extends JVMBytecodeEntity {
 	private AccessSpec[] accessSpecs;

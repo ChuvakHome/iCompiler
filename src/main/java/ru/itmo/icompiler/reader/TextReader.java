@@ -1,4 +1,4 @@
-package ru.itmo.compiler.reader;
+package ru.itmo.icompiler.reader;
 
 import java.io.BufferedReader;
 import java.io.File;

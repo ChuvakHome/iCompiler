@@ -2,6 +2,7 @@ package ru.itmo.icompiler.semantic.visitor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import ru.itmo.icompiler.exception.CompilerException;
@@ -12,8 +13,8 @@ import ru.itmo.icompiler.semantic.RecordType;
 import ru.itmo.icompiler.semantic.RecordType.RecordProperty;
 import ru.itmo.icompiler.semantic.SemUtils;
 import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.SemanticContext.Scope;
 import ru.itmo.icompiler.semantic.VarType;
-import ru.itmo.icompiler.semantic.exception.EntityRedefinitionSemanticException;
 import ru.itmo.icompiler.semantic.exception.UndefinedTypeSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
@@ -126,7 +127,6 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 
 	@Override
 	public SemanticContext visit(TypeDeclarationASTNode node, SemanticContext ctx) {
-		Token tk = node.getToken();
 		String typename = node.getTypename();
 		
 		VarType replaceType = findRealTypeWithFailureReport(node.getType(), node.getToken(), ctx);
@@ -136,19 +136,8 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 		else {
 			VarType oldEntityType = ctx.getScope().lookup(typename);
 			
-			if (oldEntityType != null) {
-				ctx.addCompilerError(
-					new EntityRedefinitionSemanticException(
-							typename, 
-							tk.lineNumber, tk.lineOffset,
-							lookupDefinitionInfo(typename)
-						)
-				);
-			} else {
+			if (oldEntityType == null)
 				ctx.getScope().addTypealias(typename, replaceType);
-				
-				addDefinitionInfo(typename, new int[] { tk.lineNumber });
-			}
 		}
 		
 		return ctx;
@@ -170,7 +159,7 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(RoutineDefinitionASTNode node, SemanticContext ctx) {
 		node.getRoutineDeclaration().accept(this, ctx);
 		
-		node.getBody().accept(this, ctx);
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		return ctx;
 	}
@@ -182,32 +171,44 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 
 	@Override
 	public SemanticContext visit(IfThenElseStatementASTNode node, SemanticContext ctx) {
-		node.getTrueBranch().accept(this, ctx);
+		node.getTrueBranch().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		if (node.getElseBranch() != null)
-			node.getElseBranch().accept(this, ctx);
+			node.getElseBranch().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		return ctx;
 	}
 
 	@Override
 	public SemanticContext visit(ForInRangeStatementASTNode node, SemanticContext ctx) {
+		ctx.getScope().addEntity(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE);
+		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
 		
-		node.getBody().accept(this, ctx);
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(
+					ctx.getScope(),
+					Map.of(),
+					Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE)
+				)));
 		
 		return ctx;
 	}
 
 	@Override
 	public SemanticContext visit(ForEachStatementASTNode node, SemanticContext ctx) {
-		node.getBody().accept(this, ctx);
+		ctx.getScope().addEntity(node.getIterVariable(), VarType.AUTO_TYPE);
+		
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(
+				ctx.getScope(),
+				Map.of(),
+				Map.of(node.getIterVariable(), VarType.AUTO_TYPE)
+			)));
 		
 		return ctx;
 	}
 
 	@Override
 	public SemanticContext visit(WhileStatementASTNode node, SemanticContext ctx) {
-		node.getBody().accept(this, ctx);
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		return ctx;
 	}
