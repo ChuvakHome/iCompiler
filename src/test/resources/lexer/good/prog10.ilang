@@ -3,7 +3,7 @@ routine main() is
   loop
     var n is 2
     var is_simple is true
-    while n * n < i
+    while n * n <= i
     loop
       is_simple := is_simple and (i % n /= 0)
       n := n + 1

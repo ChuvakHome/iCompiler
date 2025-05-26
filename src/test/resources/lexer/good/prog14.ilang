@@ -3,10 +3,10 @@ routine f() : integer is
 end 
 
 routine main() is
-  if f > 0 then
+  if f() > 0 then
     var f is 0.5
     print f
   end
 
-  print f
+  print f()
 end

@@ -1,6 +1,6 @@
 type TestResults is record
-  var succeed is 0
-  var failed is 0
+  var succeed: integer
+  var failed: integer
 end
 
 var _current_test is false
@@ -28,7 +28,7 @@ routine test_results() : TestResults is
   return _test_results
 end
 
-routine abs(x: integer) is
+routine abs(x: integer): integer is
   if x >= 0 
   then
       return x
