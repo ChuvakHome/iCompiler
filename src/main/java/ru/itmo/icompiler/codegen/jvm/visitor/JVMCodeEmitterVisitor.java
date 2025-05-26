@@ -38,6 +38,7 @@ import ru.itmo.icompiler.semantic.visitor.ASTVisitor;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.CompoundStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ContinueStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -49,6 +50,7 @@ import ru.itmo.icompiler.syntax.ast.RoutineDefinitionASTNode;
 import ru.itmo.icompiler.syntax.ast.TypeDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableAssignmentASTNode;
 import ru.itmo.icompiler.syntax.ast.VariableDeclarationASTNode;
+import ru.itmo.icompiler.syntax.ast.WhileBodyStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ArrayAccessExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.BinaryOperatorExpressionNode;
@@ -152,7 +154,8 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		private String elseLabel; // short-circuit eval
 		
 		private String loopStartLabel; 
-		private String loopEndLabel; 
+		private String loopConditionalLabel;
+		private String loopEndLabel;
 		
 		public ExpressionVisitorContext(
 					LocalVariableContext localVarCtx, 
@@ -160,6 +163,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 					String thenLabel, 
 					String elseLabel,
 					String loopStartLabel,
+					String loopConditionalLabel,
 					String loopEndLabel
 				) {
 			this.localVarCtx = localVarCtx;
@@ -169,11 +173,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			this.elseLabel = elseLabel;
 			
 			this.loopStartLabel = loopStartLabel;
+			this.loopConditionalLabel = loopConditionalLabel;
 			this.loopEndLabel = loopEndLabel;
 		}
 		
 		public ExpressionVisitorContext() {
-			this(new LocalVariableContext(), new IntCounter(), null, null, null, null);
+			this(new LocalVariableContext(), new IntCounter(), null, null, null, null, null);
 		}
 		
 		public LocalVariableContext getLocalVariableContext() {
@@ -535,7 +540,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		contextStack.add(topCtx.clone());
 		
 		LocalVariableContext subctx = new LocalVariableContext(ctx.localVarCtx);
-		ExpressionVisitorContext subexprctx = new ExpressionVisitorContext(subctx, ctx.labelCounter, ctx.thenLabel, ctx.elseLabel, ctx.loopStartLabel, ctx.loopEndLabel);
+		ExpressionVisitorContext subexprctx = new ExpressionVisitorContext(subctx, ctx.labelCounter, ctx.thenLabel, ctx.elseLabel, ctx.loopStartLabel, ctx.loopConditionalLabel, ctx.loopEndLabel);
 		
 		List<JVMBytecodeEntity> instructions = new ArrayList<>();
 		
@@ -548,6 +553,37 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		topCtx = contextStack.pop();
 		maxLocalVarNumber = Math.max(topCtx.localVariablesCount, maxLocalVarNumber);
 		
+		return instructions;
+	}
+
+	@Override
+	public List<JVMBytecodeEntity> visit(WhileBodyStatementASTNode node, ExpressionVisitorContext ctx) {
+		Limits topCtx = contextStack.peek();
+		contextStack.add(topCtx.clone());
+
+		LocalVariableContext subctx = new LocalVariableContext(ctx.localVarCtx);
+		ExpressionVisitorContext subexprctx = new ExpressionVisitorContext(subctx, ctx.labelCounter, ctx.thenLabel, ctx.elseLabel, ctx.loopStartLabel, ctx.loopConditionalLabel, ctx.loopEndLabel);
+
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+
+
+		for (int i = 0; i + 1 < node.getChildren().size(); i++) {
+			instructions.addAll(
+					node.getChildren().get(i).accept(this, subexprctx)
+			);
+		}
+		instructions.addAll(
+				Arrays.asList(
+						new JVMBytecodeLabel(ctx.loopConditionalLabel)
+				)
+		);
+		instructions.addAll(
+			node.getChildren().get(node.getChildren().size() - 1).accept(this, subexprctx)
+		);
+
+		topCtx = contextStack.pop();
+		maxLocalVarNumber = Math.max(topCtx.localVariablesCount, maxLocalVarNumber);
+
 		return instructions;
 	}
 
@@ -757,7 +793,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		int argnum = 0;
 		
 		LocalVariableContext routineLVCtx = new LocalVariableContext(ctx.localVarCtx);
-		ExpressionVisitorContext routineExprCtx = new ExpressionVisitorContext(routineLVCtx, new IntCounter(), null, null, null, null);
+		ExpressionVisitorContext routineExprCtx = new ExpressionVisitorContext(routineLVCtx, new IntCounter(), null, null, null, null, null);
 		
 		for (VariableDeclarationASTNode argDecl: routineHeader.getArgumentsDeclarations()) {
 			String argName = argDecl.getVarName();
@@ -976,10 +1012,11 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		String loopStartLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		
 		instructions.add(new JVMBytecodeLabel(loopStartLabel));
-		
+
 		String loopBodyLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
+		String loopConditionalLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
 		String loopEndLabel = CodeEmitterUtils.allocateLabel(ctx.labelCounter);
-		
+
 		instructions.addAll(
 			node.getConditionExpression().accept(expressionVisitor, ctx.toBranchContext(false, loopBodyLabel, loopEndLabel))
 		);
@@ -995,6 +1032,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 											null,
 											null,
 											loopStartLabel,
+											loopConditionalLabel,
 											loopEndLabel
 										))
 		);
@@ -1013,6 +1051,14 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		return Arrays.asList(
 					new JVMBytecodeDirective("line", node.getLineNumber()),
 					new JVMBytecodeInstruction("goto", ctx.loopEndLabel)
+				);
+	}
+
+	@Override
+	public List<JVMBytecodeEntity> visit(ContinueStatementASTNode node, ExpressionVisitorContext ctx) {
+		return Arrays.asList(
+					new JVMBytecodeDirective("line", node.getLineNumber()),
+					new JVMBytecodeInstruction("goto", ctx.loopConditionalLabel) // fixme
 				);
 	}
 

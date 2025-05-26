@@ -23,6 +23,7 @@ import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.semantic.exception.VariableIsSizelessArraySemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ContinueStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -365,9 +366,10 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		} catch (CompilerException e) {
 			e.printStackTrace();
 		}
-		
+
+		loopProcessing = true;
 		openScope();
-		
+
 		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
 
 		Scope subscope = new Scope(
@@ -375,10 +377,11 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 				Map.of(),
 				Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE)
 		);
-		
+
 		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), subscope));
 		closeScope();
-		
+		loopProcessing = false;
+
 		return ctx;
 	}
 
@@ -409,14 +412,16 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
 		}
-		
+
+		loopProcessing = true;
 		openScope();
-		
+
 		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
-		
+
 		node.getBody().accept(this, bodyCtx);
 		closeScope();
-		
+		loopProcessing = false;
+
 		return ctx;
 	}
 
@@ -455,6 +460,14 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		if (!loopProcessing)
 			ctx.addCompilerError(new LoopStatementOutsideLoopSemanticException(node.getToken().lineNumber, node.getToken().lineOffset));
 		
+		return ctx;
+	}
+
+	@Override
+	public SemanticContext visit(ContinueStatementASTNode node, SemanticContext ctx) {
+		if (!loopProcessing)
+			ctx.addCompilerError(new LoopStatementOutsideLoopSemanticException(node.getToken().lineNumber, node.getToken().lineOffset));
+
 		return ctx;
 	}
 

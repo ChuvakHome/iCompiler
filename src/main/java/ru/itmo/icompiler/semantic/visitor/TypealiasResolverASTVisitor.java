@@ -18,6 +18,7 @@ import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.exception.UndefinedTypeSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ContinueStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -215,6 +216,11 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 
 	@Override
 	public SemanticContext visit(BreakStatementASTNode node, SemanticContext ctx) {
+		return ctx;
+	}
+
+	@Override
+	public SemanticContext visit(ContinueStatementASTNode node, SemanticContext ctx) {
 		return ctx;
 	}
 
