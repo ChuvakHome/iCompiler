@@ -123,4 +123,652 @@ public final class JVMBytecodeUtils {
 						: "f";
 		}
 	}
+
+	public static int maxStackSize(List<JVMBytecodeEntity> instructions) {
+		int maxStackSize = 0;
+		int currentStackSize = 0;
+
+		for (JVMBytecodeEntity entity : instructions) {
+			if (!(entity instanceof JVMBytecodeInstruction)) {
+				continue;
+			}
+
+			JVMBytecodeInstruction instruction = (JVMBytecodeInstruction)entity;
+			String opcode = instruction.getOpcode();
+			if (opcode == null) {
+				continue;
+			}
+			int delta = 0;
+			switch (opcode) {
+				case "aaload":
+					delta = -1;
+					break;
+				case "aastore":
+					delta = -3;
+					break;
+				case "aconst_null":
+					delta = 1;
+					break;
+				case "aload":
+					delta = 1;
+					break;
+				case "aload_0":
+					delta = 1;
+					break;
+				case "aload_1":
+					delta = 1;
+					break;
+				case "aload_2":
+					delta = 1;
+					break;
+				case "aload_3":
+					delta = 1;
+					break;
+				case "anewarray":
+					delta = 0;
+					break;
+				case "areturn":
+					delta = -currentStackSize;
+					break;
+				case "arraylength":
+					delta = 0;
+					break;
+				case "astore":
+					delta = -1;
+					break;
+				case "astore_0":
+					delta = -1;
+					break;
+				case "astore_1":
+					delta = -1;
+					break;
+				case "astore_2":
+					delta = -1;
+					break;
+				case "astore_3":
+					delta = -1;
+					break;
+				case "athrow":
+					delta = -currentStackSize + 1;
+					break;
+				case "baload":
+					delta = -1;
+					break;
+				case "bastore":
+					delta = -3;
+					break;
+				case "bipush":
+					delta = 1;
+					break;
+				case "breakpoint":
+					delta = 0;
+					break;
+				case "caload":
+					delta = -1;
+					break;
+				case "castore":
+					delta = -3;
+					break;
+				case "checkcast":
+					delta = 0;
+					break;
+				case "d2f":
+					delta = 0;
+					break;
+				case "d2i":
+					delta = 0;
+					break;
+				case "d2l":
+					delta = 0;
+					break;
+				case "dadd":
+					delta = -1;
+					break;
+				case "daload":
+					delta = -1;
+					break;
+				case "dastore":
+					delta = -3;
+					break;
+				case "dcmpg":
+					delta = -1;
+					break;
+				case "dcmpl":
+					delta = -1;
+					break;
+				case "dconst_0":
+					delta = 1;
+					break;
+				case "dconst_1":
+					delta = 1;
+					break;
+				case "ddiv":
+					delta = -1;
+					break;
+				case "dload":
+					delta = 1;
+					break;
+				case "dload_0":
+					delta = 1;
+					break;
+				case "dload_1":
+					delta = 1;
+					break;
+				case "dload_2":
+					delta = 1;
+					break;
+				case "dload_3":
+					delta = 1;
+					break;
+				case "dmul":
+					delta = -1;
+					break;
+				case "dneg":
+					delta = 0;
+					break;
+				case "drem":
+					delta = -1;
+					break;
+				case "dreturn":
+					delta = -currentStackSize;
+					break;
+				case "dstore":
+					delta = -1;
+					break;
+				case "dstore_0":
+					delta = -1;
+					break;
+				case "dstore_1":
+					delta = -1;
+					break;
+				case "dstore_2":
+					delta = -1;
+					break;
+				case "dstore_3":
+					delta = -1;
+					break;
+				case "dsub":
+					delta = -1;
+					break;
+				case "dup":
+					delta = 1;
+					break;
+				case "dup_x1":
+					delta = 1;
+					break;
+				case "dup_x2":
+					delta = 1;
+					break;
+				case "dup2":
+					delta = 2;
+					break;
+				case "dup2_x1":
+					delta = 2;
+					break;
+				case "dup2_x2":
+					delta = 2;
+					break;
+				case "f2d":
+					delta = 0;
+					break;
+				case "f2i":
+					delta = 0;
+					break;
+				case "f2l":
+					delta = 0;
+					break;
+				case "fadd":
+					delta = -1;
+					break;
+				case "faload":
+					delta = -1;
+					break;
+				case "fastore":
+					delta = -3;
+					break;
+				case "fcmpg":
+					delta = -1;
+					break;
+				case "fcmpl":
+					delta = -1;
+					break;
+				case "fconst_0":
+					delta = 1;
+					break;
+				case "fconst_1":
+					delta = 1;
+					break;
+				case "fconst_2":
+					delta = 1;
+					break;
+				case "fdiv":
+					delta = -1;
+					break;
+				case "fload":
+					delta = 1;
+					break;
+				case "fload_0":
+					delta = 1;
+					break;
+				case "fload_1":
+					delta = 1;
+					break;
+				case "fload_2":
+					delta = 1;
+					break;
+				case "fload_3":
+					delta = 1;
+					break;
+				case "fmul":
+					delta = -1;
+					break;
+				case "fneg":
+					delta = 0;
+					break;
+				case "frem":
+					delta = -1;
+					break;
+				case "freturn":
+					delta = -currentStackSize;
+					break;
+				case "fstore":
+					delta = -1;
+					break;
+				case "fstore_0":
+					delta = -1;
+					break;
+				case "fstore_1":
+					delta = -1;
+					break;
+				case "fstore_2":
+					delta = -1;
+					break;
+				case "fstore_3":
+					delta = -1;
+					break;
+				case "fsub":
+					delta = -1;
+					break;
+				case "getfield":
+					delta = 0;
+					break;
+				case "getstatic":
+					delta = 1;
+					break;
+				case "goto":
+					delta = 0;
+					break;
+				case "goto_w":
+					delta = 0;
+					break;
+				case "i2b":
+					delta = 0;
+					break;
+				case "i2c":
+					delta = 0;
+					break;
+				case "i2d":
+					delta = 0;
+					break;
+				case "i2f":
+					delta = 0;
+					break;
+				case "i2l":
+					delta = 0;
+					break;
+				case "i2s":
+					delta = 0;
+					break;
+				case "iadd":
+					delta = -1;
+					break;
+				case "iaload":
+					delta = -1;
+					break;
+				case "iand":
+					delta = -1;
+					break;
+				case "iastore":
+					delta = -3;
+					break;
+				case "iconst_m1":
+					delta = 1;
+					break;
+				case "iconst_0":
+					delta = 1;
+					break;
+				case "iconst_1":
+					delta = 1;
+					break;
+				case "iconst_2":
+					delta = 1;
+					break;
+				case "iconst_3":
+					delta = 1;
+					break;
+				case "iconst_4":
+					delta = 1;
+					break;
+				case "iconst_5":
+					delta = 1;
+					break;
+				case "idiv":
+					delta = -1;
+					break;
+				case "if_acmpeq":
+					delta = -2;
+					break;
+				case "if_acmpne":
+					delta = -2;
+					break;
+				case "if_icmpeq":
+					delta = -2;
+					break;
+				case "if_icmpge":
+					delta = -2;
+					break;
+				case "if_icmpgt":
+					delta = -2;
+					break;
+				case "if_icmple":
+					delta = -2;
+					break;
+				case "if_icmplt":
+					delta = -2;
+					break;
+				case "if_icmpne":
+					delta = -2;
+					break;
+				case "ifeq":
+					delta = -1;
+					break;
+				case "ifge":
+					delta = -1;
+					break;
+				case "ifgt":
+					delta = -1;
+					break;
+				case "ifle":
+					delta = -1;
+					break;
+				case "iflt":
+					delta = -1;
+					break;
+				case "ifne":
+					delta = -1;
+					break;
+				case "ifnonnull":
+					delta = -1;
+					break;
+				case "ifnull":
+					delta = -1;
+					break;
+				case "iinc":
+					delta = 0;
+					break;
+				case "iload":
+					delta = 1;
+					break;
+				case "iload_0":
+					delta = 1;
+					break;
+				case "iload_1":
+					delta = 1;
+					break;
+				case "iload_2":
+					delta = 1;
+					break;
+				case "iload_3":
+					delta = 1;
+					break;
+				case "impdep1":
+					delta = 0;
+					break;
+				case "impdep2":
+					delta = 0;
+					break;
+				case "imul":
+					delta = -1;
+					break;
+				case "ineg":
+					delta = 0;
+					break;
+				case "instanceof":
+					delta = 0;
+					break;
+				case "invokedynamic":
+					// TODO
+					delta = 0;
+					break;
+				case "invokeinterface":
+					// TODO
+					delta = 1;
+					break;
+				case "invokespecial":
+					// TODO
+					delta = 1;
+					break;
+				case "invokestatic":
+					// TODO
+					delta = 0;
+					break;
+				case "invokevirtual":
+					// TODO
+					delta = 1;
+					break;
+				case "ior":
+					delta = -1;
+					break;
+				case "irem":
+					delta = -1;
+					break;
+				case "ireturn":
+					delta = -currentStackSize;
+					break;
+				case "ishl":
+					delta = -1;
+					break;
+				case "ishr":
+					delta = -1;
+					break;
+				case "istore":
+					delta = -1;
+					break;
+				case "istore_0":
+					delta = -1;
+					break;
+				case "istore_1":
+					delta = -1;
+					break;
+				case "istore_2":
+					delta = -1;
+					break;
+				case "istore_3":
+					delta = -1;
+					break;
+				case "isub":
+					delta = -1;
+					break;
+				case "iushr":
+					delta = -1;
+					break;
+				case "ixor":
+					delta = -1;
+					break;
+				case "jsr":
+					delta = 1;
+					break;
+				case "jsr_w":
+					delta = 1;
+					break;
+				case "l2d":
+					delta = 0;
+					break;
+				case "l2f":
+					delta = 0;
+					break;
+				case "l2i":
+					delta = 0;
+					break;
+				case "ladd":
+					delta = -1;
+					break;
+				case "laload":
+					delta = -1;
+					break;
+				case "land":
+					delta = -1;
+					break;
+				case "lastore":
+					delta = -3;
+					break;
+				case "lcmp":
+					delta = -1;
+					break;
+				case "lconst_0":
+					delta = 1;
+					break;
+				case "lconst_1":
+					delta = 1;
+					break;
+				case "ldc":
+					delta = 1;
+					break;
+				case "ldc_w":
+					delta = 1;
+					break;
+				case "ldc2_w":
+					delta = 1;
+					break;
+				case "ldiv":
+					delta = -1;
+					break;
+				case "lload":
+					delta = 1;
+					break;
+				case "lload_0":
+					delta = 1;
+					break;
+				case "lload_1":
+					delta = 1;
+					break;
+				case "lload_2":
+					delta = 1;
+					break;
+				case "lload_3":
+					delta = 1;
+					break;
+				case "lmul":
+					delta = -1;
+					break;
+				case "lneg":
+					delta = 0;
+					break;
+				case "lookupswitch":
+					delta = -1;
+					break;
+				case "lor":
+					delta = -1;
+					break;
+				case "lrem":
+					delta = -1;
+					break;
+				case "lreturn":
+					delta = -currentStackSize;
+					break;
+				case "lshl":
+					delta = -1;
+					break;
+				case "lshr":
+					delta = -1;
+					break;
+				case "lstore":
+					delta = -1;
+					break;
+				case "lstore_0":
+					delta = -1;
+					break;
+				case "lstore_1":
+					delta = -1;
+					break;
+				case "lstore_2":
+					delta = -1;
+					break;
+				case "lstore_3":
+					delta = -1;
+					break;
+				case "lsub":
+					delta = -1;
+					break;
+				case "lushr":
+					delta = -1;
+					break;
+				case "lxor":
+					delta = -1;
+					break;
+				case "monitorenter":
+					delta = -1;
+					break;
+				case "monitorexit":
+					delta = -1;
+					break;
+				case "multianewarray":
+					// TODO
+					delta = -1;
+					break;
+				case "new":
+					delta = 1;
+					break;
+				case "newarray":
+					delta = 0;
+					break;
+				case "nop":
+					delta = 0;
+					break;
+				case "pop":
+					delta = -1;
+					break;
+				case "pop2":
+					delta = -2;
+					break;
+				case "putfield":
+					delta = -2;
+					break;
+				case "putstatic":
+					delta = -1;
+					break;
+				case "ret":
+					delta = 0;
+					break;
+				case "return":
+					delta = -currentStackSize;
+					break;
+				case "saload":
+					delta = -1;
+					break;
+				case "sastore":
+					delta = -3;
+					break;
+				case "sipush":
+					delta = 1;
+					break;
+				case "swap":
+					delta = 0;
+					break;
+				case "tableswitch":
+					delta = -1;
+					break;
+				case "wide":
+					throw new AssertionError();
+				
+				default:
+					throw new AssertionError();
+			}
+
+			currentStackSize += delta;
+			maxStackSize = Math.max(delta, maxStackSize);
+		}
+
+		return maxStackSize;
+	}
 }
