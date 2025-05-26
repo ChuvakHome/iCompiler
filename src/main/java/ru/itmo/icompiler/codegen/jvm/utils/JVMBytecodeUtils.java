@@ -777,7 +777,7 @@ public final class JVMBytecodeUtils {
 			}
 
 			currentStackSize += delta;
-			maxStackSize = Math.max(delta, maxStackSize);
+			maxStackSize = Math.max(currentStackSize, maxStackSize);
 		}
 
 		return maxStackSize;
