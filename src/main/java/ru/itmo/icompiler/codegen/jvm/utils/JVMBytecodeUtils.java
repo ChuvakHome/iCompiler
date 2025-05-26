@@ -537,25 +537,35 @@ public final class JVMBytecodeUtils {
 					delta = 0;
 					break;
 				case "invokedynamic":
-					// TODO
-					delta = 0;
+					throw new AssertionError();
+
+				case "invokeinterface": {
+					String method = instruction.getArg(0);
+					int argsCount = argsCount(method);
+					// objectref + N args - result
+					delta = -argsCount;
 					break;
-				case "invokeinterface":
-					// TODO
-					delta = 1;
+				}
+				case "invokespecial": {
+					String method = instruction.getArg(0);
+					int argsCount = argsCount(method);
+					// objectref + N args - result
+					delta = -argsCount;
 					break;
-				case "invokespecial":
-					// TODO
-					delta = 1;
+				}
+				case "invokestatic": {
+					String method = instruction.getArg(0);
+					int argsCount = argsCount(method);
+					// N args - result
+					delta = -argsCount + 1;
 					break;
-				case "invokestatic":
-					// TODO
-					delta = 0;
+				}
+				case "invokevirtual": {
+					String argsCount = instruction.getArg(1);
+					// Args declared - result
+					delta = -Integer.parseInt(argsCount) + 1;
 					break;
-				case "invokevirtual":
-					// TODO
-					delta = 1;
-					break;
+				}
 				case "ior":
 					delta = -1;
 					break;
@@ -770,5 +780,24 @@ public final class JVMBytecodeUtils {
 		}
 
 		return maxStackSize;
+	}
+
+	public static int argsCount(String name) {
+		int result = 0;
+		int start = name.indexOf('(');
+		int current = start + 1;
+		while (current < name.length() && name.charAt(current) != ')') {
+			if (name.charAt(current) == 'L') {
+				while(current < name.length() && name.charAt(current) != ';') {
+					current++;
+				}
+			} else if (name.charAt(current) == '[') {
+				current++;
+				continue;
+			}
+			result++;
+			current++;
+		}
+		return result;
 	}
 }

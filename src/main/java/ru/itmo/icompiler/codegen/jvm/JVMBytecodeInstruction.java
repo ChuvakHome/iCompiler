@@ -15,6 +15,10 @@ public class JVMBytecodeInstruction extends JVMBytecodeEntity {
 	public String getOpcode() {
 		return opcode;
 	}
+
+	public String getArg(int i) {
+		return args[i];
+	}
 	
 	public void setLabel(String label) {
 		this.label = label;
