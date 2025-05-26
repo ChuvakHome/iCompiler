@@ -1,10 +1,12 @@
 package ru.itmo.icompiler.codegen.jvm;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class JVMBytecodeInstruction extends JVMBytecodeEntity {
 	private String label;
-	private String opcode;
+	protected String opcode;
 	private String[] args;
 	
 	public JVMBytecodeInstruction(String opcode, Object... args) {
@@ -45,6 +47,41 @@ public class JVMBytecodeInstruction extends JVMBytecodeEntity {
 	public static class JVMBytecodeLabel extends JVMBytecodeInstructionLabeled {
 		public JVMBytecodeLabel(String label) {
 			super(label, null);
+		}
+	}
+	
+	public static class LookupSwitchInstruction extends JVMBytecodeInstruction {
+		private Map<Integer, String> switchesMap;
+		private String defaultLabel;
+		
+		public LookupSwitchInstruction(Map<Integer, String> switches, String defaultLabel) {
+			super("lookupswitch");
+			
+			this.switchesMap = new LinkedHashMap<>(switches);
+			this.defaultLabel = defaultLabel;
+		}
+		
+		public LookupSwitchInstruction(String defaultLabel) {
+			this(Map.of(), defaultLabel);
+		}
+		
+		public void addSwitch(int value, String dest) {
+			switchesMap.put(value, dest);
+		}
+		
+		@Override
+		public String toString(int ident) {
+			StringBuilder sb = new StringBuilder(" ".repeat(ident)).append(this.opcode);
+			
+			switchesMap.forEach((value, dest) -> {
+				sb.append("\n\t")
+				.append(value)
+				.append(": ")
+				.append(dest);
+			});
+			sb.append("\n\tdefault: ").append(defaultLabel);
+			
+			return sb.toString();
 		}
 	}
 }

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.TreeMap;
 
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeClass;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeDirective;
@@ -359,6 +360,144 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				);
 	}
 	
+	private static JVMBytecodeMethod emitCodeForMainMethod(List<RoutineDeclarationASTNode> declaredRoutines) {
+		class RoutineCaseInfo {
+			String routineName;
+			int hashCode;
+			String label;
+			List<JVMBytecodeEntity> caseInstructions;
+			
+			public RoutineCaseInfo(String routineName, int hashCode, String label, List<JVMBytecodeEntity> caseInstructions) {
+				this.routineName = routineName;
+				this.hashCode = hashCode;
+				this.label = label;
+				this.caseInstructions = caseInstructions;
+			}
+		}
+		
+		List<RoutineDeclarationASTNode> routines = new ArrayList<>(declaredRoutines);
+		routines.removeIf(node -> 
+			node.getArgumentsDeclarations().stream().anyMatch(argDecl ->  
+				argDecl.getVarType().getTag() != VarType.Tag.PRIMITIVE
+			)
+		);
+		
+		IntCounter labelCounter = new IntCounter();
+		
+		Map<Integer, String> switchMap = new TreeMap<>();
+		List<RoutineCaseInfo> routineCaseInfos = new ArrayList<>();
+		
+		int locals = 0;
+		int stackSize = 10;
+		
+		for (RoutineDeclarationASTNode declNode: routines) {
+			final String routineName = declNode.getRoutineName(); 
+			final String caseLabel = CodeEmitterUtils.allocateLabel(labelCounter);
+			
+			List<VariableDeclarationASTNode> argsDeclarations = declNode.getArgumentsDeclarations(); 
+			
+			List<JVMBytecodeEntity> caseBody = new ArrayList<>();
+			List<JVMBytecodeEntity> loadArgsInstrs = new ArrayList<>();
+			
+			StringBuilder routineFullMangledName = new StringBuilder("_").append(routineName).append("(");
+			
+			for (int i = 1; i <= argsDeclarations.size(); ++i) {
+				VariableDeclarationASTNode argDecl = argsDeclarations.get(i - 1);
+
+				caseBody.addAll(
+					List.of(
+						new JVMBytecodeInstruction("aload_0"),
+						JVMCodeEmitterExpressionVisitor.getLoadIntConstInstruction(i),
+						new JVMBytecodeInstruction("aaload")
+					)
+				);
+				
+				VarType argType = argDecl.getVarType();
+				routineFullMangledName.append(getMangledTypeName(argType));
+				
+				if (argType == VarType.BOOLEAN_PRIMITIVE_TYPE) {
+					caseBody.addAll(
+						List.of(
+							new JVMBytecodeInstruction("invokestatic", "java/lang/Boolean/parseBoolean(Ljava/lang/String;)Z"),
+							new JVMBytecodeInstruction("istore", i)
+						)
+					);
+					
+					loadArgsInstrs.add(new JVMBytecodeInstruction("iload", i));
+				} else if (argType == VarType.INTEGER_PRIMITIVE_TYPE) {
+					caseBody.addAll(
+						List.of(
+							new JVMBytecodeInstruction("invokestatic", "java/lang/Integer/parseInt(Ljava/lang/String;)I"),
+							new JVMBytecodeInstruction("istore", i)
+						)
+					);
+					
+					loadArgsInstrs.add(new JVMBytecodeInstruction("iload", i));
+				} else {
+					caseBody.addAll(
+						List.of(
+							new JVMBytecodeInstruction("invokestatic", "java/lang/Float/parseFloat(Ljava/lang/String;)F"),
+							new JVMBytecodeInstruction("fstore", i)
+						)
+					);
+					
+					loadArgsInstrs.add(new JVMBytecodeInstruction("fload", i));
+				}
+			}
+			
+			routineFullMangledName
+				.append(")")
+				.append(
+					getMangledTypeName(declNode.getResultType())
+				);
+			
+			caseBody.addAll(loadArgsInstrs);
+			caseBody.add(
+				new JVMBytecodeInstruction("invokestatic", PROGRAM_CLASS_NAME + "/" + routineFullMangledName.toString())
+			);
+			
+			locals = Math.max(locals, argsDeclarations.size());
+			
+			switchMap.put(routineName.hashCode(), caseLabel);
+			
+			RoutineCaseInfo caseInfo = new RoutineCaseInfo(routineName, routineName.hashCode(), caseLabel, caseBody);
+			routineCaseInfos.add(caseInfo);
+		}
+		
+		List<JVMBytecodeEntity> instructions = new ArrayList<>();
+		
+		String retLabel = CodeEmitterUtils.allocateLabel(labelCounter);
+		
+		instructions.addAll(
+			List.of(
+				new JVMBytecodeInstruction("aload_0"),
+				new JVMBytecodeInstruction("iconst_0"),
+				new JVMBytecodeInstruction("aaload"),
+				
+				new JVMBytecodeInstruction("invokevirtual", "java/lang/String/hashCode()I"),
+				new JVMBytecodeInstruction.LookupSwitchInstruction(switchMap, retLabel)
+			)
+		);
+		
+		routineCaseInfos.forEach(caseInfo -> {
+			instructions.add(new JVMBytecodeLabel(caseInfo.label));
+			instructions.addAll(caseInfo.caseInstructions);
+			instructions.add(new JVMBytecodeInstruction("goto", retLabel));
+		});
+		
+		instructions.add(new JVMBytecodeInstructionLabeled(retLabel, "return"));
+		
+		return new JVMBytecodeMethod(
+					methodSpecs(JVMBytecodeMethod.AccessSpec.PUBLIC, JVMBytecodeMethod.AccessSpec.STATIC), 
+					"main", 
+					List.of("[Ljava/lang/String;"), 
+					"V", 
+					locals + 1,
+					stackSize,
+					instructions
+				);
+	}
+	
 	private static List<JVMBytecodeEntity> emitCodeForRecordClass(RecordType recordType) {
 		List<JVMBytecodeEntity> initMethodInstructions = new ArrayList<>();
 		
@@ -489,6 +628,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		List<JVMBytecodeMethod> programClassMethods = new ArrayList<>();
 		
 		Map<String, VariableDeclarationASTNode> globalVarsDeclarations = new LinkedHashMap<>();
+		List<RoutineDeclarationASTNode> declaredRoutines = new ArrayList<>();
 		
 		for (ASTNode child: node.getChildren()) {
 			switch (child.getNodeType()) {
@@ -501,8 +641,11 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 					break;
 				}
 				case ROUTINE_DEF_NODE: {
+					RoutineDeclarationASTNode routineDeclNode = ((RoutineDefinitionASTNode) child).getRoutineDeclaration();
+					
 					JVMBytecodeMethod jvmMethod = (JVMBytecodeMethod) child.accept(this, ctx).get(0);
 					programClassMethods.add(jvmMethod);
+					declaredRoutines.add(routineDeclNode);
 					
 					break;
 				}
@@ -511,9 +654,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			}
 		}
 		
-		programClassMethods.add(
-			emitCodeForProgramClassInit(globalVarsDeclarations) // add <clinit>
-		); 
+		programClassMethods.addAll(
+			List.of(
+				emitCodeForProgramClassInit(globalVarsDeclarations), // add <clinit>
+				emitCodeForMainMethod(declaredRoutines)
+			)
+		);
 		
 		List<JVMBytecodeEntity> programClasses = new ArrayList<>();
 		programClasses.add(new JVMBytecodeClass(
@@ -747,7 +893,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		RoutineDeclarationASTNode routineHeader = node.getRoutineDeclaration();
 		routineHeader.accept(this, ctx); // save info about return type
 		
-		String methodName = routineHeader.getRoutineName();
+		String methodName = "_" + routineHeader.getRoutineName();
 		
 		int argsCount = routineHeader.getArgumentsDeclarations().size();
 		
