@@ -176,25 +176,35 @@ public class ICompiler {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		File inputProgram = new File(args[0]);
-		File outputFile = new File(
+		ICompiler compiler = null;
+		File outputFile = null;
+		
+		if (args[0].equals("-")) {
+			compiler = new ICompiler(System.in);
+			outputFile = new File("output.jar");
+		}
+		else {
+			File inputProgram = new File(args[0]);
+			
+			if (!inputProgram.exists()) {
+				System.err.printf("No such file '%s'.", inputProgram.getPath());
+				
+				System.exit(-1);
+			} else if (!inputProgram.canRead()) {
+				System.err.printf("Permissions denied for file '%s'.", inputProgram.getPath());
+				
+				System.exit(-2);
+			}
+			
+			compiler = new ICompiler(inputProgram);
+			
+			outputFile = new File(
 					replaceFileExtension(
 						inputProgram.getName(),
 						"jar"
 					)
 				);
-		
-		if (!inputProgram.exists()) {
-			System.err.printf("No such file '%s'.", inputProgram.getPath());
-			
-			System.exit(-1);
-		} else if (!inputProgram.canRead()) {
-			System.err.printf("Permissions denied for file '%s'.", inputProgram.getPath());
-			
-			System.exit(-2);
 		}
-		
-		ICompiler compiler = new ICompiler(inputProgram);
 		
 		compiler.parseProgram();
 		compiler.checkSemantic();
