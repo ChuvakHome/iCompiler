@@ -650,26 +650,30 @@ public class ClassFile {
         CodeAttr code = _getCode();
         autoNumber();
         flushInsnBuffer();
-
-        if (insn.args.equalsIgnoreCase("i") && (val instanceof Integer)) {
-            bufferInsn(new Insn(insn.opcode, val.intValue(), insn.args.charAt(0) == 'I'));
-        } else if (name.startsWith("ldc")) {
-            if (val instanceof Integer) {
-                bufferInsn(new Insn(insn.opcode,
-                             new IntegerCP(val.intValue())));
-            } else if (val instanceof Float) {
-                bufferInsn(new Insn(insn.opcode,
-                             new FloatCP(val.floatValue())));
-            } else if (val instanceof Long) {
-                bufferInsn(new Insn(insn.opcode,
-                             new LongCP(val.longValue())));
-            } else if (val instanceof Double) {
-                bufferInsn(new Insn(insn.opcode,
-                             new DoubleCP(val.doubleValue())));
+        
+        Insn inst = null;
+        if (insn.args.equals("i") && (val instanceof Integer)) {
+            inst = new Insn(insn.opcode, val.intValue(), insn.args.charAt(0) == 'I');
+        } else if (insn.args.equals("constant")) {
+            if (val instanceof Integer || val instanceof Long) {
+                inst = new Insn(insn.opcode,
+                             new IntegerCP(val.intValue()));
+            } else if (val instanceof Float || val instanceof Double) {
+                inst = new Insn(insn.opcode,
+                             new FloatCP(val.floatValue()));
+            }
+        } else if (insn.args.equals("bigconstant")) {
+            if (val instanceof Integer || val instanceof Long) {
+                inst = new Insn(insn.opcode,
+                             new LongCP(val.longValue()));
+            } else if (val instanceof Float || val instanceof Double) {
+                inst = new Insn(insn.opcode,
+                             new DoubleCP(val.doubleValue()));
             }
         } else {
             throw new jasError("Bad arguments for instruction " + name);
         }
+        bufferInsn(inst);
     }
 
     //

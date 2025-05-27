@@ -21,6 +21,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 
+import jas.StackMap;
 import jasmin.ClassFile;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeClass;
 import ru.itmo.icompiler.codegen.jvm.JVMBytecodeEntity;
@@ -231,6 +232,7 @@ public class ICompiler {
 		}
 		
 		List<ClassFileEntity> emittedClassFiles = entities.stream().map(jvmEntity -> {
+			StackMap.reinit();
 			JVMBytecodeClass jvmClass = (JVMBytecodeClass) jvmEntity;
 			
 			ClassFileEntity classFile = null;
