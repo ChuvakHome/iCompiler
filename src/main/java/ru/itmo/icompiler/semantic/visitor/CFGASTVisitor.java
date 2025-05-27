@@ -30,8 +30,8 @@ public class CFGASTVisitor extends AbstractASTVisitor {
     private ArrayList<ASTNode> parents;
     private ArrayList<ASTNode> breaks;
 
-    public CFGASTVisitor(AbstractExpressionASTVisitor expressionisitor) {
-        super(expressionisitor);
+    public CFGASTVisitor(AbstractExpressionASTVisitor expressionVisitor) {
+        super(expressionVisitor);
         cfg = null;
         parents = null;
         breaks = null;

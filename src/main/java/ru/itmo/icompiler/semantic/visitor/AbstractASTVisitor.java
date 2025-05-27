@@ -17,8 +17,8 @@ public abstract class AbstractASTVisitor implements ASTVisitor<SemanticContext, 
 	
 	protected AbstractExpressionASTVisitor expressionVisitor;
 	
-	public AbstractASTVisitor(AbstractExpressionASTVisitor expressionisitor) {
-		this.expressionVisitor = expressionisitor;
+	public AbstractASTVisitor(AbstractExpressionASTVisitor expressionVisitor) {
+		this.expressionVisitor = expressionVisitor;
 		
 		definitionsInfo.add(new HashMap<>());
 	}
