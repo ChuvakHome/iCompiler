@@ -238,7 +238,7 @@ public class JVMCodeEmitterExpressionVisitor implements ExpressionNodeVisitor<Li
 		
 		sb.append(JVMCodeEmitterVisitor.PROGRAM_CLASS_NAME)
 			.append('/')
-			.append(node.getRoutineName())
+			.append("_" + node.getRoutineName())
 			.append('(')
 		;
 		

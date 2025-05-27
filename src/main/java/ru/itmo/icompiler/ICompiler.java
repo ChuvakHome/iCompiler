@@ -187,11 +187,11 @@ public class ICompiler {
 			File inputProgram = new File(args[0]);
 			
 			if (!inputProgram.exists()) {
-				System.err.printf("No such file '%s'.", inputProgram.getPath());
+				System.err.printf("No such file '%s'.\n", inputProgram.getPath());
 				
 				System.exit(-1);
 			} else if (!inputProgram.canRead()) {
-				System.err.printf("Permissions denied for file '%s'.", inputProgram.getPath());
+				System.err.printf("Permissions denied for file '%s'.\n", inputProgram.getPath());
 				
 				System.exit(-2);
 			}
