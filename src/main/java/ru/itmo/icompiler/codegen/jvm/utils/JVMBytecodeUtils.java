@@ -561,9 +561,10 @@ public final class JVMBytecodeUtils {
 					break;
 				}
 				case "invokevirtual": {
-					String argsCount = instruction.getArg(1);
-					// Args declared - result
-					delta = -Integer.parseInt(argsCount) + 1;
+					String method = instruction.getArg(0);
+					int argsCount = argsCount(method);
+					// objectref + N args - result
+					delta = -argsCount;
 					break;
 				}
 				case "ior":
