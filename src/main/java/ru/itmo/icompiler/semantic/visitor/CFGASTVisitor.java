@@ -11,6 +11,7 @@ import ru.itmo.icompiler.semantic.exception.NoReturnSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.CompoundStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ContinueStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -216,6 +217,23 @@ public class CFGASTVisitor extends AbstractASTVisitor {
 
         cfg.put(node, parents);
         breaks.add(node);
+
+        parents = new ArrayList<>();
+
+        return ctx;
+    }
+
+    @Override
+    public SemanticContext visit(ContinueStatementASTNode node, SemanticContext ctx) {
+        if (breaks == null) {
+            // Houston, we have a problem
+            // We're not in cycle
+            // Let's ignore continue
+            return ctx;
+        }
+
+        cfg.put(node, parents);
+        breaks.add(node); // fixme
 
         parents = new ArrayList<>();
 

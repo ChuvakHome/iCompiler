@@ -24,6 +24,7 @@ import ru.itmo.icompiler.semantic.exception.WrongNumberLiteralSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.CompoundStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ContinueStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -895,6 +896,11 @@ public class SimpleParser implements Parser {
 				break;
 			case BREAK_KEYWORD:
 				stmtNode = new BreakStatementASTNode(null, tok);
+				lexer.skipToken();
+				expectToken(TokenType.SEMICOLON_DELIMITER, TokenType.LINE_FEED_DELIMITER);
+				break;
+			case CONTINUE_KEYWORD:
+				stmtNode = new ContinueStatementASTNode(null, tok);
 				lexer.skipToken();
 				expectToken(TokenType.SEMICOLON_DELIMITER, TokenType.LINE_FEED_DELIMITER);
 				break;
