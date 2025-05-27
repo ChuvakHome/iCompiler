@@ -456,6 +456,12 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 				new JVMBytecodeInstruction("invokestatic", PROGRAM_CLASS_NAME + "/" + routineFullMangledName.toString())
 			);
 			
+			if (declNode.getResultType() != VarType.VOID_TYPE) {
+				caseBody.add(
+					new JVMBytecodeInstruction("pop")
+				);
+			}
+			
 			locals = Math.max(locals, argsDeclarations.size());
 			
 			switchMap.put(routineName.hashCode(), caseLabel);
