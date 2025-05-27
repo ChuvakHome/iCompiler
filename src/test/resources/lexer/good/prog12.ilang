@@ -1,9 +1,9 @@
 type Point is record
-  var x is 0
-  var y is 0
+  var x: integer
+  var y: integer
 end
  
-routine max(a : integer, b : integer) is
+routine max(a : integer, b : integer): integer is
   if a > b
   then
     return a
@@ -12,7 +12,7 @@ routine max(a : integer, b : integer) is
   end
 end
 
-routine min(a : integer, b : integer) is
+routine min(a : integer, b : integer): integer is
   if a < b
   then
     return a
@@ -21,14 +21,14 @@ routine min(a : integer, b : integer) is
   end
 end
 
-routine area(a : Point, b : Point, c : Point) is
+routine area(a : Point, b : Point, c : Point): integer is
   return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 end
  
-routine check_bound(a : integer, b : integer, c : integer, d : integer) is
+routine check_bound(a : integer, b : integer, c : integer, d : integer): integer is
   return max(min(a, b), min(c, d)) <= min(max(a, b), max(c, d))
 end
  
-routine intersect(a : Point, b : Point, c : Point, d : Point) is
+routine intersect(a : Point, b : Point, c : Point, d : Point): boolean is
   return check_bound(a.x, b.x, c.x, d.x) and check_bound(a.y, b.y, c.y, d.y) and area(a, b, c) * area(a, b, d) <= 0 and area(c, d, a) * area(c, d, b) <= 0
 end

@@ -17,6 +17,7 @@ import ru.itmo.icompiler.syntax.ast.expression.RealValueExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.RoutineCallExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.UnaryOperatorExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.VariableExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.UnaryOperatorExpressionNode.UnaryOperatorType;
 
 public class SimpleExpressionVisitor extends AbstractExpressionASTVisitor {
 	static void addCastExpr(VarType targetType, ExpressionASTNode expr) {
@@ -50,7 +51,7 @@ public class SimpleExpressionVisitor extends AbstractExpressionASTVisitor {
 	public SemanticContext visit(RoutineCallExpressionNode node, SemanticContext ctx) {
 		String routineName = node.getRoutineName();
 		
-		FunctionType routineType = ctx.getScope().deepLookupRoutine(routineName);
+		FunctionType routineType = (FunctionType)ctx.getScope().deepLookup(routineName);
 		node.setRoutineType(routineType);
 		
 		if (routineType == null)
@@ -79,7 +80,11 @@ public class SimpleExpressionVisitor extends AbstractExpressionASTVisitor {
 
 	@Override
 	public SemanticContext visit(UnaryOperatorExpressionNode node, SemanticContext ctx) {
-		node.getValue().accept(this, ctx);
+		ExpressionASTNode unopValue = node.getValue();
+		unopValue.accept(this, ctx);
+		
+		if (node.getUnaryOperatorType() == UnaryOperatorType.NOT_BINOP && !unopValue.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
+			node.setValue(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, unopValue));
 		
 		return ctx;
 	}

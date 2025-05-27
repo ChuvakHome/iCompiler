@@ -1,0 +1,12 @@
+routine loop_test(x: integer, y: integer) is
+  for i in 1..5 loop
+    break
+  end
+
+  var arr : array[10] integer
+  for a in arr
+  loop
+     print a
+     break
+  end
+end

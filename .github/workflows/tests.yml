@@ -1,0 +1,39 @@
+name: Run tests
+on:
+  push:
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Build
+        run: |
+          mvn --batch-mode --update-snapshots -DskipTests package
+
+      - name: Test
+        run: |
+          mvn --batch-mode test 
+
+      - name: Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Tests Report
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
+          fail-on-error: true

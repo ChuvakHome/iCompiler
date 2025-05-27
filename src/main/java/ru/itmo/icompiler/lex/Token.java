@@ -37,7 +37,8 @@ public class Token {
 		IN_KEYWORD,
 		
 		BREAK_KEYWORD,
-		
+		CONTINUE_KEYWORD,
+
 		LOOP_KEYWORD,
 		
 		IS_KEYWORD,
@@ -148,7 +149,8 @@ public class Token {
 			Map.entry("in", TokenType.IN_KEYWORD),
 			
 			Map.entry("break", TokenType.BREAK_KEYWORD),
-			
+			Map.entry("continue", TokenType.CONTINUE_KEYWORD),
+
 			Map.entry("loop", TokenType.LOOP_KEYWORD),
 			
 			Map.entry("is", TokenType.IS_KEYWORD),

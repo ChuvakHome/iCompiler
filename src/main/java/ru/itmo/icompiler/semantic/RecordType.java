@@ -17,14 +17,19 @@ public class RecordType extends CompoundType {
 		public final String name;
 		public final ExpressionASTNode defaultValue;
 		
-		public RecordProperty(VarType type, String name, ExpressionASTNode defaultValue) {
+		public final int line, offset;
+		
+		public RecordProperty(VarType type, String name, ExpressionASTNode defaultValue, int line, int offset) {
 			this.type = type;
 			this.name = name;
 			this.defaultValue = defaultValue;
+			
+			this.line = line;
+			this.offset = offset;
 		}
 		
-		public RecordProperty(VarType type, String name) {
-			this(type, name, null);
+		public RecordProperty(VarType type, String name, int line, int offset) {
+			this(type, name, null, line, offset);
 		}
 		
 		public int hashCode() {
@@ -57,8 +62,9 @@ public class RecordType extends CompoundType {
 		
 		this.properties = new LinkedHashMap<>();
 		
-		for (RecordProperty prop: properties)
-			this.properties.put(prop.name, prop);
+		properties.stream().sorted((prop1, prop2) -> prop1.name.compareTo(prop2.name)).forEachOrdered(
+			prop -> this.properties.put(prop.name, prop)
+		);
 	}
 	
 	public Map<String, VarType> getPropertiesTypes() {
@@ -88,7 +94,7 @@ public class RecordType extends CompoundType {
 	
 	@Override
 	public int hashCode() {
-		List objects = new ArrayList<>();
+		List<Object> objects = new ArrayList<>();
 		
 		objects.add(VarType.Tag.RECORD);
 		properties.values().forEach(objects::add);

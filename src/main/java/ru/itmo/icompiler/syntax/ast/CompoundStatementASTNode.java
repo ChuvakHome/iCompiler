@@ -7,6 +7,10 @@ public class CompoundStatementASTNode extends ASTNode {
 	public CompoundStatementASTNode(ASTNode parentNode) {
 		super(parentNode, ASTNodeType.COMPOUND_STMT_NODE);
 	}
+
+	public CompoundStatementASTNode(ASTNode parentNode, ASTNodeType type) {
+		super(parentNode, type);
+	}
 	
 	public<R, A> R accept(ASTVisitor<R, A> visitor, A arg) {
 		return visitor.visit(this, arg);

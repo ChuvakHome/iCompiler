@@ -9,6 +9,7 @@ import ru.itmo.icompiler.semantic.SemanticContext;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.CompoundStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ProgramASTNode;
+import ru.itmo.icompiler.syntax.ast.WhileBodyStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
 public abstract class AbstractASTVisitor implements ASTVisitor<SemanticContext, SemanticContext> {
@@ -51,7 +52,14 @@ public abstract class AbstractASTVisitor implements ASTVisitor<SemanticContext, 
 		
 		return ctx;
 	}
-	
+
+	public SemanticContext visit(WhileBodyStatementASTNode node, SemanticContext ctx) {
+		for (ASTNode child: node.getChildren())
+			ctx = child.accept(this, ctx);
+
+		return ctx;
+	}
+
 	public SemanticContext visit(ExpressionASTNode node, SemanticContext ctx) {
 		try {
 			node.validate(ctx);

@@ -31,25 +31,28 @@ public class SemUtils {
 		return Optional.ofNullable(entityType).orElseThrow(() -> e);
 	}
 	
-	public static FunctionType checkRoutine(String entity, SemanticContext ctx, boolean deepSearch, SemanticException e) throws SemanticException {
-		FunctionType routineType = null;
+	public static VarType checkRoutine(String entity, SemanticContext ctx, boolean deepSearch, SemanticException e) throws SemanticException {
+		VarType type;
 		
 		if (deepSearch)
-			routineType = ctx.getScope().deepLookupRoutine(entity);
+			type = ctx.getScope().deepLookupEntity(entity);
 		else
-			routineType = ctx.getScope().lookupRoutine(entity);
-		
-		return Optional.ofNullable(routineType).orElseThrow(() -> e);
+			type = ctx.getScope().lookupEntity(entity);
+
+		return Optional.ofNullable(type).orElseThrow(() -> e);
 	}
 	
 	public static VarType checkTypealias(String typename, SemanticContext ctx, boolean deepSearch, SemanticException e) throws SemanticException {
-		VarType realType = null;
+		VarType type;
 		
 		if (deepSearch)
-			realType = ctx.getScope().deepLookupTypealias(typename);
+			type = ctx.getScope().deepLookupTypealias(typename);
 		else
-			realType = ctx.getScope().lookupTypealias(typename);
+			type = ctx.getScope().lookupTypealias(typename);
 		
+		// TODO: Check it's typealis? Probably.
+		VarType realType = type;
+
 		return Optional.ofNullable(realType).orElseThrow(() -> e);
 	}
 }

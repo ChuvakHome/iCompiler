@@ -9,7 +9,7 @@ import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 
 public class WhileStatementASTNode extends LoopStatementASTNode {
 	private ExpressionASTNode conditionExprNode;
-	
+
 	public WhileStatementASTNode(ASTNode parentNode, ExpressionASTNode condition, CompoundStatementASTNode body) {
 		super(parentNode, ASTNodeType.WHILE_LOOP_NODE, body);
 
@@ -54,4 +54,10 @@ public class WhileStatementASTNode extends LoopStatementASTNode {
     public Token getToken() {
         return conditionExprNode.getToken();
     }
+
+	public WhileBodyStatementASTNode getBody() {
+		WhileBodyStatementASTNode node = new WhileBodyStatementASTNode(bodyNode.getParentNode());
+		node.addChildren(bodyNode.getChildren());
+		return node;
+	}
 }
