@@ -2,8 +2,10 @@ package ru.itmo.icompiler.semantic.visitor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import ru.itmo.icompiler.exception.CompilerException;
 import ru.itmo.icompiler.lex.Token;
 import ru.itmo.icompiler.semantic.ArrayType;
 import ru.itmo.icompiler.semantic.ArrayType.SizedArrayType;
@@ -11,11 +13,12 @@ import ru.itmo.icompiler.semantic.RecordType;
 import ru.itmo.icompiler.semantic.RecordType.RecordProperty;
 import ru.itmo.icompiler.semantic.SemUtils;
 import ru.itmo.icompiler.semantic.SemanticContext;
+import ru.itmo.icompiler.semantic.SemanticContext.Scope;
 import ru.itmo.icompiler.semantic.VarType;
-import ru.itmo.icompiler.semantic.exception.EntityRedefinitionSemanticException;
 import ru.itmo.icompiler.semantic.exception.UndefinedTypeSemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ContinueStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
@@ -52,14 +55,23 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 				List<RecordProperty> props = new ArrayList<>();
 				RecordType recordType = (RecordType) realType;
 				
+				List<CompilerException> propertyResolvingErrors = new ArrayList<>();
+				
 				for (RecordProperty prop: recordType.getProperties()) {
 					VarType propRealType = processType(prop.type, ctx);
 					
 					if (propRealType != null)
-						props.add(new RecordProperty(propRealType, prop.name));
+						props.add(new RecordProperty(propRealType, prop.name, prop.line, prop.offset));
+					else
+						propertyResolvingErrors.add(new UndefinedTypeSemanticException(prop.type.getTypename(), prop.line, prop.offset));
 				}
 				
-				return new RecordType(props);
+				if (propertyResolvingErrors.isEmpty())
+					return new RecordType(props);
+			
+				propertyResolvingErrors.forEach(ctx::addCompilerError);
+				
+				return null;
 			case ARRAY:
 				ArrayType arrayType = (ArrayType) realType;
 				
@@ -99,9 +111,11 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(VariableDeclarationASTNode node, SemanticContext ctx) {
 		VarType realVarType = findRealTypeWithFailureReport(node.getVarType(), node.getToken(), ctx);
 		
-		if (realVarType != null)
+		if (realVarType != null) {
 			node.setVarType(realVarType);
-		else
+			
+			ctx.getScope().addEntity(node.getVarName(), realVarType);
+		} else
 			detachingCandidates.add(node);
 		
 		return ctx;
@@ -114,29 +128,17 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 
 	@Override
 	public SemanticContext visit(TypeDeclarationASTNode node, SemanticContext ctx) {
-		Token tk = node.getToken();
 		String typename = node.getTypename();
+		
 		VarType replaceType = findRealTypeWithFailureReport(node.getType(), node.getToken(), ctx);
 		
 		if (replaceType == null)
 			detachingCandidates.add(node);
 		else {
-			VarType oldEntityType = ctx.getScope().lookupEntity(typename);
-			VarType oldTypealiasType = ctx.getScope().lookupTypealias(typename);
+			VarType oldEntityType = ctx.getScope().lookup(typename);
 			
-			if (oldEntityType != null || oldTypealiasType != null) {
-				ctx.addCompilerError(
-					new EntityRedefinitionSemanticException(
-							typename, 
-							tk.lineNumber, tk.lineOffset,
-							lookupDefinitionInfo(typename)
-						)
-				);
-			} else {
+			if (oldEntityType == null)
 				ctx.getScope().addTypealias(typename, replaceType);
-				
-				addDefinitionInfo(typename, new int[] { tk.lineNumber });
-			}
 		}
 		
 		return ctx;
@@ -158,7 +160,7 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(RoutineDefinitionASTNode node, SemanticContext ctx) {
 		node.getRoutineDeclaration().accept(this, ctx);
 		
-		node.getBody().accept(this, ctx);
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		return ctx;
 	}
@@ -170,38 +172,55 @@ public class TypealiasResolverASTVisitor extends AbstractASTVisitor {
 
 	@Override
 	public SemanticContext visit(IfThenElseStatementASTNode node, SemanticContext ctx) {
-		node.getTrueBranch().accept(this, ctx);
+		node.getTrueBranch().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		if (node.getElseBranch() != null)
-			node.getElseBranch().accept(this, ctx);
+			node.getElseBranch().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		return ctx;
 	}
 
 	@Override
 	public SemanticContext visit(ForInRangeStatementASTNode node, SemanticContext ctx) {
+		ctx.getScope().addEntity(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE);
+		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
 		
-		node.getBody().accept(this, ctx);
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(
+					ctx.getScope(),
+					Map.of(),
+					Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE)
+				)));
 		
 		return ctx;
 	}
 
 	@Override
 	public SemanticContext visit(ForEachStatementASTNode node, SemanticContext ctx) {
-		node.getBody().accept(this, ctx);
+		ctx.getScope().addEntity(node.getIterVariable(), VarType.AUTO_TYPE);
+		
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(
+				ctx.getScope(),
+				Map.of(),
+				Map.of(node.getIterVariable(), VarType.AUTO_TYPE)
+			)));
 		
 		return ctx;
 	}
 
 	@Override
 	public SemanticContext visit(WhileStatementASTNode node, SemanticContext ctx) {
-		node.getBody().accept(this, ctx);
+		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope())));
 		
 		return ctx;
 	}
 
 	@Override
 	public SemanticContext visit(BreakStatementASTNode node, SemanticContext ctx) {
+		return ctx;
+	}
+
+	@Override
+	public SemanticContext visit(ContinueStatementASTNode node, SemanticContext ctx) {
 		return ctx;
 	}
 

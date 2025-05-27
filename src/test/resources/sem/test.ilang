@@ -1,0 +1,15 @@
+
+var v : integer
+var w : real
+var x : boolean
+
+routine main() is
+ type F is real
+ var f : real
+ var g : integer
+ var h : boolean
+
+ var i is 1
+ var j is 1.0
+ var k is true
+end

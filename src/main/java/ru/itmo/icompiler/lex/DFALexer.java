@@ -5,8 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.function.Predicate;
 
-import ru.itmo.compiler.reader.TextReader;
 import ru.itmo.icompiler.lex.Token.TokenType;
+import ru.itmo.icompiler.reader.TextReader;
 
 public class DFALexer implements Lexer {
 	public static final int DEFAULT_TAB_SIZE = 4;

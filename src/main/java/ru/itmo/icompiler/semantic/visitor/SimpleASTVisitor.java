@@ -13,18 +13,22 @@ import ru.itmo.icompiler.semantic.SemanticContext.Scope;
 import ru.itmo.icompiler.semantic.VarType;
 import ru.itmo.icompiler.semantic.VarType.Tag;
 import ru.itmo.icompiler.semantic.exception.EntityRedefinitionSemanticException;
+import ru.itmo.icompiler.semantic.exception.ImmutableLeftPartSemanticExceptionImpl;
 import ru.itmo.icompiler.semantic.exception.LoopStatementOutsideLoopSemanticException;
 import ru.itmo.icompiler.semantic.exception.NonAssignableLeftPartSemanticException;
 import ru.itmo.icompiler.semantic.exception.NonIterableInForEachSemanticException;
 import ru.itmo.icompiler.semantic.exception.RoutineDeclarationMismatchSemanticException;
+import ru.itmo.icompiler.semantic.exception.RoutineNotDefinedSemanticException;
 import ru.itmo.icompiler.semantic.exception.SemanticException;
 import ru.itmo.icompiler.semantic.exception.VariableIsSizelessArraySemanticException;
 import ru.itmo.icompiler.syntax.ast.ASTNode;
 import ru.itmo.icompiler.syntax.ast.BreakStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ContinueStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForEachStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.ForInRangeStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.IfThenElseStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.PrintStatementASTNode;
+import ru.itmo.icompiler.syntax.ast.ProgramASTNode;
 import ru.itmo.icompiler.syntax.ast.ReturnStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.RoutineDeclarationASTNode;
 import ru.itmo.icompiler.syntax.ast.RoutineDefinitionASTNode;
@@ -35,10 +39,14 @@ import ru.itmo.icompiler.syntax.ast.WhileStatementASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode;
 import ru.itmo.icompiler.syntax.ast.expression.ImplicitCastExpressionNode;
 import ru.itmo.icompiler.syntax.ast.expression.PropertyAccessExpressionNode;
+import ru.itmo.icompiler.syntax.ast.expression.VariableExpressionNode;
 import ru.itmo.icompiler.syntax.exception.VariableDeclWithoutTypeSyntaxException;
+
+import static ru.itmo.icompiler.syntax.ast.expression.ExpressionASTNode.ExpressionNodeType.VARIABLE_EXPR_NODE;
 
 public class SimpleASTVisitor extends AbstractASTVisitor {
 	private FunctionType currentRoutineType;
+	private Map<String, FunctionType> routines;
 	private boolean loopProcessing;
 	
 	public SimpleASTVisitor(AbstractExpressionASTVisitor expressionVisitor) {
@@ -53,20 +61,37 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		if (ctx.getScope().lookup(varName) != null) {
 			if (reportRedefintion)
 				ctx.addCompilerError(new EntityRedefinitionSemanticException(varName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(varName)));
-		}
-		else {
+		} else {
 			addDefinitionInfo(varName, new int[] { tk.lineNumber });
 			ctx.getScope().addEntity(varName, varType);
 		}
 	}
 	
 	private SemanticContext visitRoutineArgDecl(VariableDeclarationASTNode node, SemanticContext ctx) {
-		if (ctx.getScope().lookupEntity(node.getVarName()) == null)
+		if (ctx.getScope().lookup(node.getVarName()) == null)
 			tryAddVariableToScope(node, ctx, false);
 		
 		return ctx;
 	}
 	
+	@Override
+	public SemanticContext visit(ProgramASTNode node, SemanticContext ctx) {
+		routines = new HashMap<>();
+
+		for (ASTNode child: node.getChildren())
+			child.accept(this, ctx);
+		
+		for(Map.Entry<String, FunctionType> entry : routines.entrySet()) {
+			if (entry.getValue() == null) {
+				String routineName = entry.getKey();
+				int[] routineDecl = lookupDefinitionInfo(routineName);
+				ctx.addCompilerError(new RoutineNotDefinedSemanticException(routineName, routineDecl[0], 1));
+			}
+		}
+
+		return ctx;
+	}
+
 	@Override
 	public SemanticContext visit(VariableDeclarationASTNode node, SemanticContext ctx) {
 		String varName = node.getVarName();
@@ -83,7 +108,8 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 				assignValue.validate(ctx);
 				varType = assignNode.getValueNode().inferType(ctx);
 				
-				ctx.getScope().addEntity(varName, varType);
+				node.setVarType(varType);
+				tryAddVariableToScope(node, ctx, true);
 				assignNode.getLeftSide().inferType(ctx); // force to cache variable type
 			} catch (CompilerException e) {
 				varType = null;
@@ -110,7 +136,10 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 				} else {
 					visitAssigmentLite(assignNode, new SemanticContext(
 								ctx.getCompilerErrors(),
-								new Scope(ctx.getScope(), Map.of(varName, varType))
+								new Scope(
+									ctx.getScope(),
+									Map.of(varName, varType)
+								)
 							), ctx);
 					
 					tryAddVariableToScope(node, ctx, true);
@@ -158,6 +187,10 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			checkPrimaryAssignable(lhs);
 			
 			VarType leftType = lhs.inferType(lhsCtx);
+			if (lhs.getExpressionNodeType() == VARIABLE_EXPR_NODE
+					&& lhsCtx.getScope().isEntityImmutable(((VariableExpressionNode) lhs).getVariable())) {
+				throw new ImmutableLeftPartSemanticExceptionImpl(lhs.getStartToken().lineNumber, lhs.getStartToken().lineOffset);
+			}
 
 			rhs.checkType(ctx, leftType);
 			rhs.accept(this, ctx);
@@ -182,7 +215,13 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		String typename = node.getTypename();
 		VarType newType = node.getType();
 		
-		ctx.getScope().addTypealias(typename, newType);
+		Scope scope = ctx.getScope();
+		VarType entity = scope.lookup(typename);
+		if (entity != null) {
+			ctx.addCompilerError(new EntityRedefinitionSemanticException(typename, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(typename)));
+			return ctx;
+		}
+		scope.addTypealias(typename, newType);
 		addDefinitionInfo(typename, new int[] { tk.lineNumber });
 		
 		return ctx;
@@ -203,20 +242,26 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			String routineName = node.getRoutineName();
 			
-			FunctionType prevRoutineType = ctx.getScope().lookupRoutine(routineName);
+			VarType definitionType = routines.get(routineName);
 			VarType entityType = ctx.getScope().lookup(routineName);
+
+			boolean isDeclared = entityType != null;
+			boolean isDefined = definitionType != null;
 			
-			if (entityType != null && entityType != prevRoutineType)
+			if (isDeclared && isDefined)
 				throw new EntityRedefinitionSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
 			
-			if (prevRoutineType != null) {
-				if (prevRoutineType.equals(funcType))
+			if (isDeclared) {
+				if (funcType.equals(entityType))
 					addDefinitionInfo(routineName, new int[] { tk.lineNumber });
-				else
+				else if (entityType.getTag() == Tag.FUNCTION)
 					throw new RoutineDeclarationMismatchSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
+				else
+					throw new EntityRedefinitionSemanticException(routineName, tk.lineNumber, tk.lineOffset, lookupDefinitionInfo(routineName));
 			} else {
 				addDefinitionInfo(routineName, new int[] { tk.lineNumber });
-				ctx.getScope().addRoutine(routineName, funcType);
+				ctx.getScope().addEntity(routineName, funcType);
+				routines.put(routineName, null);
 			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
@@ -230,8 +275,9 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		visit(node.getRoutineDeclaration(), ctx);
 		
 		FunctionType funcType = parseRoutineTypeFromDecl(node.getRoutineDeclaration(), ctx);
+		routines.put(node.getRoutineDeclaration().getRoutineName(), funcType);
 		
-		Scope subscope = new Scope(ctx.getScope(), funcType.getArgumentsTypes(), new HashMap<>());
+		Scope subscope = new Scope(ctx.getScope(), funcType.getArgumentsTypes());
 		
 		currentRoutineType = funcType;
 		
@@ -271,9 +317,12 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			ExpressionASTNode conditionExpr = node.getConditionExpression();
 			
-			conditionExpr.accept(this, ctx);
-			if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
-				node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			if (conditionExpr != null) {
+				conditionExpr.accept(this, ctx);
+				
+				if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
+					node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
 		}
@@ -295,7 +344,7 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(ForInRangeStatementASTNode node, SemanticContext ctx) {
 		ExpressionASTNode fromExpr = node.getFromExpression();
 		ExpressionASTNode toExpr = node.getToExpression();
-
+		
 		try {
 			fromExpr.validate(ctx);
 			fromExpr.checkType(ctx, VarType.INTEGER_PRIMITIVE_TYPE);
@@ -317,12 +366,22 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		} catch (CompilerException e) {
 			e.printStackTrace();
 		}
-		
+
+		loopProcessing = true;
 		openScope();
-		Scope subscope = new Scope(ctx.getScope(), Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE));
+
+		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
+
+		Scope subscope = new Scope(
+				ctx.getScope(),
+				Map.of(),
+				Map.of(node.getIterVariable(), VarType.INTEGER_PRIMITIVE_TYPE)
+		);
+
 		node.getBody().accept(this, new SemanticContext(ctx.getCompilerErrors(), subscope));
 		closeScope();
-		
+		loopProcessing = false;
+
 		return ctx;
 	}
 
@@ -330,32 +389,39 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 	public SemanticContext visit(ForEachStatementASTNode node, SemanticContext ctx) {
 		ExpressionASTNode arrayExpr = node.getArrayExpression();
 		
-		SemanticContext bodyCtx; 
+		SemanticContext bodyCtx = new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope()));
 		
 		try {
-			arrayExpr.validate(ctx);
-			VarType iterEntityType = arrayExpr.inferType(ctx);
-			
-			if (iterEntityType.getTag() == VarType.Tag.ARRAY) {
-				ArrayType iterArray = (ArrayType) iterEntityType;
+			if (arrayExpr != null) {
+				arrayExpr.validate(ctx);
+				VarType iterEntityType = arrayExpr.inferType(ctx);
 				
-				Scope subscope = new Scope(ctx.getScope(), Map.of(
-							node.getIterVariable(), iterArray.getElementType()
-						));
-				
-				bodyCtx = new SemanticContext(ctx.getCompilerErrors(), subscope);
-			} else
-				throw new NonIterableInForEachSemanticException(iterEntityType, arrayExpr.getStartToken().lineNumber, arrayExpr.getStartToken().lineOffset);
+				if (iterEntityType.getTag() == VarType.Tag.ARRAY) {
+					ArrayType iterArray = (ArrayType) iterEntityType;
+					
+					Scope subscope = new Scope(
+							ctx.getScope(),
+							Map.of(),
+							Map.of(node.getIterVariable(), iterArray.getElementType())
+					);
+					
+					bodyCtx = new SemanticContext(ctx.getCompilerErrors(), subscope);
+				} else
+					throw new NonIterableInForEachSemanticException(iterEntityType, arrayExpr.getStartToken().lineNumber, arrayExpr.getStartToken().lineOffset);
+			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
-			
-			bodyCtx = new SemanticContext(ctx.getCompilerErrors(), new Scope(ctx.getScope()));
 		}
-		
+
+		loopProcessing = true;
 		openScope();
+
+		addDefinitionInfo(node.getIterVariable(), new int[] { node.getToken().lineNumber });
+
 		node.getBody().accept(this, bodyCtx);
 		closeScope();
-		
+		loopProcessing = false;
+
 		return ctx;
 	}
 
@@ -366,9 +432,12 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 			
 			ExpressionASTNode conditionExpr = node.getConditionExpression();
 			
-			conditionExpr.accept(this, ctx);
-			if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
-				node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			if (conditionExpr != null) {
+				conditionExpr.accept(this, ctx);
+				
+				if (!conditionExpr.getExpressionType().equals(VarType.BOOLEAN_PRIMITIVE_TYPE))
+					node.setConditionExpression(new ImplicitCastExpressionNode(null, VarType.BOOLEAN_PRIMITIVE_TYPE, conditionExpr));
+			}
 		} catch (CompilerException e) {
 			ctx.addCompilerError(e);
 		}
@@ -391,6 +460,14 @@ public class SimpleASTVisitor extends AbstractASTVisitor {
 		if (!loopProcessing)
 			ctx.addCompilerError(new LoopStatementOutsideLoopSemanticException(node.getToken().lineNumber, node.getToken().lineOffset));
 		
+		return ctx;
+	}
+
+	@Override
+	public SemanticContext visit(ContinueStatementASTNode node, SemanticContext ctx) {
+		if (!loopProcessing)
+			ctx.addCompilerError(new LoopStatementOutsideLoopSemanticException(node.getToken().lineNumber, node.getToken().lineOffset));
+
 		return ctx;
 	}
 

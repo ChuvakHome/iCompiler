@@ -4,8 +4,8 @@ type God is real
 type EmptyRecord is record end
 type SomeRecord is record
   var foo : Foo
-  var bar : Bar is true
-  var god is 3.14
+  var bar : Bar
+  var god : real
 end
 type SimpleArray is array[1] Foo
 
