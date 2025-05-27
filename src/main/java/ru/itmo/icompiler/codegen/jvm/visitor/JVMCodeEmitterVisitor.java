@@ -349,6 +349,8 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 			new JVMBytecodeInstruction("return")
 		);
 		
+		stackSize = JVMBytecodeUtils.maxStackSize(clinitMethodInstructions);
+
 		return new JVMBytecodeMethod(
 					methodSpecs(JVMBytecodeMethod.AccessSpec.STATIC),
 					"<clinit>",
@@ -568,6 +570,8 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 		
 		initMethodInstructions.add(new JVMBytecodeInstruction("return"));
 		
+		stackSize = JVMBytecodeUtils.maxStackSize(initMethodInstructions);
+
 		return Arrays.asList(
 				new JVMBytecodeClass(
 					classSpecs(JVMBytecodeClass.AccessSpec.PUBLIC, JVMBytecodeClass.AccessSpec.FINAL),
@@ -935,6 +939,8 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 //		if (routineHeader.getResultType() == VarType.VOID_TYPE)
 			routineInstructions.add(new JVMBytecodeInstruction("return"));
 		
+		int stackSize = JVMBytecodeUtils.maxStackSize(routineInstructions);
+
 		return Arrays.asList(
 				new JVMBytecodeMethod(
 					methodSpecs(
@@ -945,7 +951,7 @@ public class JVMCodeEmitterVisitor implements ASTVisitor<List<JVMBytecodeEntity>
 					argsTypesDescriptors,
 					returnTypeDescriptor, 
 					maxLocalVarNumber, 
-					10,
+					stackSize,
 					routineInstructions
 				)
 			);
